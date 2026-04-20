@@ -7,25 +7,47 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  body { font-family: Pretendard, system-ui, sans-serif; background:#f5f7fb; color:#0f172a; }
-  .card { background:#fff; border:1px solid rgba(148,163,184,.18); box-shadow:0 10px 30px rgba(2,6,23,.06); border-radius:20px; }
-  .chip { border:1px solid #e2e8f0; background:#fff; color:#475569; border-radius:9999px; padding:8px 14px; font-size:14px; }
-  .chip.active { background:#0f172a; color:#fff; border-color:#0f172a; }
-  .input { width:100%; border:1px solid #e2e8f0; border-radius:14px; padding:12px 14px; outline:none; }
-  .input:focus { border-color:#64748b; }
-  .btn-dark { background:#0f172a; color:#fff; border-radius:14px; padding:12px 16px; font-weight:600; }
-  .btn-light { background:#fff; color:#334155; border:1px solid #e2e8f0; border-radius:14px; padding:12px 16px; font-weight:600; }
+  :root{
+    --bg:#f5f7fb;
+    --card:#ffffff;
+    --line:#e2e8f0;
+    --text:#0f172a;
+    --muted:#64748b;
+    --navy:#0f172a;
+    --navy-soft:#1e293b;
+  }
+  *{box-sizing:border-box}
+  body{font-family:Pretendard,system-ui,sans-serif;background:var(--bg);color:var(--text)}
+  .card{background:var(--card);border:1px solid rgba(148,163,184,.18);box-shadow:0 10px 26px rgba(2,6,23,.05);border-radius:18px}
+  .chip{border:1px solid var(--line);background:#fff;color:#475569;border-radius:9999px;padding:8px 14px;font-size:13px;font-weight:500;transition:.18s}
+  .chip.active,.chip:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .input,.select,.textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 12px;outline:none;background:#fff;font-size:14px}
+  .input:focus,.select:focus,.textarea:focus{border-color:#64748b;box-shadow:0 0 0 3px rgba(15,23,42,.07)}
+  .btn-dark{background:var(--navy);color:#fff;border-radius:12px;padding:11px 16px;font-weight:700}
+  .btn-light{background:#fff;color:#334155;border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-weight:700}
+  .section-title{font-size:12px;font-weight:800;letter-spacing:.04em;color:#64748b;margin-bottom:10px}
+  .group-card{border:1px solid #e8edf4;border-radius:16px;padding:16px;background:#fbfcfe}
+  .field-label{display:block;font-size:12px;font-weight:700;color:#64748b;margin-bottom:6px}
+  .option-btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;color:#334155;transition:.18s;min-height:42px}
+  .option-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .mini-btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;color:#334155}
+  .month-row{background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0}
+  .table-head th{font-size:12px;color:#94a3b8;font-weight:700;vertical-align:middle}
+  .stat-value{font-size:28px;font-weight:800;line-height:1.1}
+  @media (max-width: 1200px){
+    .dashboard-wrap{max-width:1180px}
+  }
 </style>
 </head>
 <body>
-<div class="max-w-7xl mx-auto p-6 space-y-6">
+<div class="dashboard-wrap max-w-[1240px] mx-auto p-4 md:p-5 space-y-5">
 
-  <section class="card p-6">
-    <div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+  <section class="card p-5">
+    <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
       <div>
-        <p class="text-sm text-slate-400">SBS Academy 3-1</p>
-        <h1 class="text-3xl font-bold tracking-tight mt-1">상담 매출 관리 대시보드</h1>
-        <p class="text-sm text-slate-400 mt-2">월별 현황, 멘토별 분석, 우선 확인 건, 상담 목록을 한 화면에서 확인</p>
+        <p class="text-xs text-slate-400">SBS Academy 3-1</p>
+        <h1 class="text-2xl md:text-[30px] font-bold tracking-tight mt-1">상담 매출 관리 대시보드</h1>
+        <p class="text-sm text-slate-400 mt-2">월별 현황, 멘토별 성과, 우선 확인 건, 상담 목록을 한 화면에서 정리</p>
       </div>
       <div class="flex flex-wrap gap-2 items-center">
         <div id="monthTabs" class="flex flex-wrap gap-2"></div>
@@ -34,29 +56,28 @@
     </div>
   </section>
 
-  <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-    <div class="card p-5"><p class="text-sm text-slate-400">총 상담</p><p id="totalCount" class="text-2xl font-semibold mt-3">0</p></div>
-    <div class="card p-5"><p class="text-sm text-slate-400">총 매출</p><p id="totalSales" class="text-2xl font-semibold mt-3">0</p></div>
-    <div class="card p-5"><p class="text-sm text-slate-400">수금</p><p id="paidSales" class="text-2xl font-semibold mt-3 text-sky-600">0</p></div>
-    <div class="card p-5"><p class="text-sm text-slate-400">잔액</p><p id="remainingSales" class="text-2xl font-semibold mt-3 text-rose-600">0</p></div>
-    <div class="card p-5"><p class="text-sm text-slate-400">등록 전환율</p><p id="conversionRate" class="text-2xl font-semibold mt-3">0%</p></div>
-    <div class="rounded-[20px] bg-[#0f172a] p-5 text-white shadow-sm"><p class="text-sm text-slate-300">결과 요약</p><div class="mt-4 flex flex-wrap gap-3 text-sm"><span>등록 <b id="regCount">0</b></span><span>COD <b id="codCount">0</b></span><span>미등록 <b id="failCount">0</b></span><span>추등 <b id="promoteCount">0</b></span></div></div>
+  <section class="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+    <div class="card p-4"><p class="text-xs text-slate-400">총 상담</p><p id="totalCount" class="stat-value mt-3">0</p></div>
+    <div class="card p-4"><p class="text-xs text-slate-400">총 실결제</p><p id="totalSales" class="stat-value mt-3">0</p></div>
+    <div class="card p-4"><p class="text-xs text-slate-400">총 매출</p><p id="paidSales" class="stat-value mt-3 text-sky-600">0</p></div>
+    <div class="card p-4"><p class="text-xs text-slate-400">잔액</p><p id="remainingSales" class="stat-value mt-3 text-rose-600">0</p></div>
+    <div class="card p-4"><p class="text-xs text-slate-400">등록 전환율</p><p id="conversionRate" class="stat-value mt-3">0%</p></div>
+    <div class="rounded-[18px] bg-[#0f172a] p-4 text-white shadow-sm"><p class="text-xs text-slate-300">결과 요약</p><div class="mt-4 grid grid-cols-2 gap-2 text-sm"><span>등록 <b id="regCount">0</b></span><span>COD <b id="codCount">0</b></span><span>미등록 <b id="failCount">0</b></span><span>추등 <b id="promoteCount">0</b></span></div></div>
   </section>
 
-  <section class="grid gap-6 xl:grid-cols-[1.12fr_1.88fr]">
-    <div class="space-y-6">
-      <div class="card p-6">
+  <section class="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+    <div class="space-y-5">
+      <div class="card p-5">
         <h2 class="text-lg font-bold tracking-tight mb-4">멘토별 성과 분석</h2>
         <div id="mentorCards" class="space-y-3"></div>
       </div>
-
-      <div class="card p-6">
+      <div class="card p-5">
         <h2 class="text-lg font-bold tracking-tight mb-4">우선 확인 건</h2>
         <div id="urgentList" class="space-y-3"></div>
       </div>
     </div>
 
-    <div class="space-y-6">
+    <div class="space-y-5 min-w-0">
       <div class="card p-4">
         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <input id="search" placeholder="학생 / 멘토 / 과정 검색" class="input lg:max-w-xs" oninput="renderAll()" />
@@ -64,7 +85,7 @@
         </div>
       </div>
 
-      <div class="rounded-[20px] bg-gradient-to-r from-[#0f172a] to-[#1e293b] p-5 text-white">
+      <div class="rounded-[18px] bg-gradient-to-r from-[#0f172a] to-[#1e293b] p-5 text-white">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p class="text-sm text-slate-300">이번 달 핵심 흐름</p>
@@ -80,23 +101,20 @@
       </div>
 
       <div class="card overflow-hidden">
-        <div class="border-b border-slate-200 bg-slate-50 px-6 py-4">
+        <div class="border-b border-slate-200 bg-slate-50 px-5 py-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 class="text-lg font-bold tracking-tight">상담 목록</h2>
+          <p class="text-xs text-slate-400">월별 구분 / 줄 정렬 / 할인구성 요약</p>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead class="border-b border-slate-200 bg-white text-left text-slate-400">
+          <table class="w-full min-w-[1120px] text-sm">
+            <thead class="table-head border-b border-slate-200 bg-white text-left">
               <tr>
-                <th class="px-4 py-3">날짜</th>
+                <th class="px-4 py-3">상담일</th>
                 <th class="px-4 py-3">메이드 기간</th>
-                <th class="px-4 py-3">학생</th>
-                <th class="px-4 py-3">멘토</th>
+                <th class="px-4 py-3">학생 / 멘토</th>
                 <th class="px-4 py-3">과정</th>
-                <th class="px-4 py-3">총금액</th>
-                <th class="px-4 py-3">할인구성</th>
-                <th class="px-4 py-3">실결제</th>
-                <th class="px-4 py-3">수금</th>
-                <th class="px-4 py-3">잔액</th>
+                <th class="px-4 py-3">금액 정보</th>
+                <th class="px-4 py-3">할인 구성</th>
                 <th class="px-4 py-3">결과</th>
                 <th class="px-4 py-3 text-right">관리</th>
               </tr>
@@ -109,39 +127,160 @@
   </section>
 </div>
 
-<div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4">
-  <div class="w-full max-w-5xl rounded-[20px] bg-white p-6 shadow-2xl">
+<div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/45 p-3 md:p-5">
+  <div class="w-full max-w-6xl rounded-[22px] bg-white p-5 md:p-6 shadow-2xl max-h-[92vh] overflow-y-auto">
     <div class="mb-5 flex items-center justify-between">
       <div>
         <p class="text-sm text-slate-400">입력 전용 창</p>
-        <h2 id="modalTitle" class="text-xl font-bold tracking-tight">상담 입력</h2>
+        <h2 id="modalTitle" class="text-2xl font-bold tracking-tight">상담 입력</h2>
       </div>
       <button onclick="closeModal()" class="btn-light">닫기</button>
     </div>
 
-    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-      <input id="date" placeholder="날짜 04.21" class="input" />
-      <input id="madePeriod" placeholder="메이드 기간 04.01 ~ 04.30" class="input" />
-      <input id="student" placeholder="학생명" class="input" />
-      <input id="mentor" placeholder="멘토" class="input" />
-      <input id="course" placeholder="과정명" class="input" />
-      <input id="price" placeholder="총금액" inputmode="numeric" class="input" oninput="formatCurrencyInput(this); updatePaymentPreview();" />
-      <input id="discountRate" placeholder="퍼센트 할인율 %" type="number" class="input" oninput="updatePaymentPreview()" />
-      <input id="freePaidCount" placeholder="유료과목 수" type="number" class="input" />
-      <input id="freeSupportCount" placeholder="무료지원 과목 수" type="number" class="input" />
-      <input id="freeSupportAmount" placeholder="무료지원 금액" inputmode="numeric" class="input" oninput="formatCurrencyInput(this); updatePaymentPreview();" />
-      <input id="employeeDiscount" placeholder="직원할인 금액" inputmode="numeric" class="input" oninput="formatCurrencyInput(this); updatePaymentPreview();" />
-      <input id="finalPrice" placeholder="실결제 금액" class="input bg-slate-50" readonly />
-      <input id="paid" placeholder="수금" inputmode="numeric" class="input" oninput="formatCurrencyInput(this);" />
-      <select id="result" class="input">
-        <option>등록</option>
-        <option>COD</option>
-        <option>미등록</option>
-        <option>추등</option>
-      </select>
+    <div class="space-y-4">
+      <div class="grid gap-4 xl:grid-cols-2">
+        <div class="group-card">
+          <div class="section-title">분류</div>
+          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div>
+              <label class="field-label">상담 날짜</label>
+              <input id="date" type="date" class="input" />
+            </div>
+            <div>
+              <label class="field-label">메이드 시작</label>
+              <input id="madeStart" type="date" class="input" onchange="syncMadePeriodLabel()" />
+            </div>
+            <div>
+              <label class="field-label">메이드 종료</label>
+              <input id="madeEnd" type="date" class="input" onchange="syncMadePeriodLabel()" />
+            </div>
+            <div>
+              <label class="field-label">결과</label>
+              <select id="result" class="select">
+                <option>등록</option>
+                <option>COD</option>
+                <option>미등록</option>
+                <option>추등</option>
+              </select>
+            </div>
+          </div>
+          <div class="mt-3 rounded-xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-500">
+            메이드 기간: <span id="madePeriodPreview" class="font-semibold text-slate-700">-</span>
+          </div>
+        </div>
+
+        <div class="group-card">
+          <div class="section-title">학생</div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label class="field-label">학생명</label>
+              <input id="student" placeholder="학생명 입력" class="input" />
+            </div>
+            <div>
+              <label class="field-label">멘토</label>
+              <input id="mentor" placeholder="멘토명 입력" class="input" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="group-card">
+        <div class="section-title">과정</div>
+        <div class="space-y-3">
+          <div id="courseButtons" class="flex flex-wrap gap-2"></div>
+          <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_140px]">
+            <input id="customCourseInput" class="input" placeholder="추가할 과정명 입력" />
+            <button type="button" onclick="addCustomCourse()" class="btn-light">과정 추가</button>
+          </div>
+          <div class="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-500">
+            선택 과정: <span id="selectedCourseLabel" class="font-semibold text-slate-700">선택 안됨</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid gap-4 xl:grid-cols-[1.25fr_.95fr]">
+        <div class="group-card space-y-4">
+          <div class="section-title">금액 정보</div>
+          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div>
+              <label class="field-label">총금액</label>
+              <input id="price" placeholder="0" inputmode="numeric" class="input" oninput="formatCurrencyInput(this); updatePaymentPreview();" />
+            </div>
+            <div>
+              <label class="field-label">직원할인</label>
+              <input id="employeeDiscount" placeholder="0" inputmode="numeric" class="input" oninput="formatCurrencyInput(this); updatePaymentPreview();" />
+            </div>
+            <div>
+              <label class="field-label">직권할인</label>
+              <input id="directDiscount" placeholder="0" inputmode="numeric" class="input" oninput="formatCurrencyInput(this); updatePaymentPreview();" />
+            </div>
+            <div>
+              <label class="field-label">실결제 금액</label>
+              <input id="finalPrice" placeholder="자동 계산" class="input bg-slate-50" readonly />
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 space-y-4">
+            <div>
+              <p class="text-sm font-semibold text-slate-700">할인 방식</p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button type="button" id="subjectSupportToggle" class="option-btn" onclick="toggleDiscountType('subject')">과목지원</button>
+                <button type="button" id="percentDiscountToggle" class="option-btn" onclick="toggleDiscountType('percent')">% 할인</button>
+              </div>
+            </div>
+
+            <div id="subjectSupportFields" class="hidden border-t border-slate-100 pt-4">
+              <div class="grid gap-3 md:grid-cols-3">
+                <div>
+                  <label class="field-label">유료과목 수</label>
+                  <input id="freePaidCount" type="number" min="0" placeholder="0" class="input" />
+                </div>
+                <div>
+                  <label class="field-label">무료과목 수</label>
+                  <input id="freeSupportCount" type="number" min="0" placeholder="0" class="input" />
+                </div>
+                <div>
+                  <label class="field-label">과목지원 금액</label>
+                  <input id="freeSupportAmount" inputmode="numeric" placeholder="0" class="input" oninput="formatCurrencyInput(this); updatePaymentPreview();" />
+                </div>
+              </div>
+            </div>
+
+            <div id="percentDiscountFields" class="hidden border-t border-slate-100 pt-4">
+              <div class="grid gap-3 md:grid-cols-[180px_minmax(0,1fr)]">
+                <div>
+                  <label class="field-label">할인율</label>
+                  <input id="discountRate" type="number" min="0" placeholder="0" class="input" oninput="updatePaymentPreview()" />
+                </div>
+                <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-500 flex items-center">
+                  총금액 기준으로 자동 계산됩니다.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="group-card space-y-4">
+          <div class="section-title">결제 정보</div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label class="field-label">매출</label>
+              <input id="paid" placeholder="0" inputmode="numeric" class="input" oninput="formatCurrencyInput(this); updateRemainPreview();" />
+            </div>
+            <div>
+              <label class="field-label">잔액</label>
+              <input id="remainPreview" placeholder="자동 계산" class="input bg-slate-50" readonly />
+            </div>
+          </div>
+          <div>
+            <label class="field-label">특이사항</label>
+            <textarea id="memo" class="textarea min-h-[136px]" placeholder="상담 메모, 이슈, 후속 확인 내용"></textarea>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="mt-4 flex gap-2">
+    <div class="mt-5 flex gap-2">
       <button onclick="closeModal()" class="btn-light w-full">취소</button>
       <button onclick="saveData()" id="saveButton" class="btn-dark w-full">저장</button>
     </div>
@@ -154,28 +293,102 @@ let rows = [];
 let editIndex = null;
 let currentMonth = '전체';
 let currentResult = '전체';
+let selectedCourse = '';
+const defaultCourses = ['편집','모션','실내','웹툰','드로잉','마야','웹','자격증'];
+let courseOptions = [...defaultCourses];
+const discountState = { subject:false, percent:false };
 
 const resultTone = {
-  등록: { badge:'bg-emerald-50 text-emerald-700 border border-emerald-200', row:'bg-emerald-50/45', line:'border-l-4 border-emerald-500 bg-emerald-50 text-emerald-700' },
-  COD: { badge:'bg-amber-50 text-amber-700 border border-amber-200', row:'bg-amber-50/45', line:'border-l-4 border-amber-500 bg-amber-50 text-amber-700' },
-  미등록: { badge:'bg-rose-50 text-rose-700 border border-rose-200', row:'bg-rose-50/45', line:'border-l-4 border-rose-500 bg-rose-50 text-rose-700' },
-  추등: { badge:'bg-violet-50 text-violet-700 border border-violet-200', row:'bg-violet-50/45', line:'border-l-4 border-violet-500 bg-violet-50 text-violet-700' }
+  등록: { badge:'bg-emerald-50 text-emerald-700 border border-emerald-200', row:'bg-emerald-50/35', line:'border-l-4 border-emerald-500 bg-emerald-50 text-emerald-700' },
+  COD: { badge:'bg-amber-50 text-amber-700 border border-amber-200', row:'bg-amber-50/35', line:'border-l-4 border-amber-500 bg-amber-50 text-amber-700' },
+  미등록: { badge:'bg-rose-50 text-rose-700 border border-rose-200', row:'bg-rose-50/30', line:'border-l-4 border-rose-500 bg-rose-50 text-rose-700' },
+  추등: { badge:'bg-violet-50 text-violet-700 border border-violet-200', row:'bg-violet-50/30', line:'border-l-4 border-violet-500 bg-violet-50 text-violet-700' }
 };
 
 function onlyNumber(v){ return String(v || '').replace(/[^0-9]/g,''); }
 function num(v){ return Number(onlyNumber(v) || 0); }
 function format(v){ return Number(v || 0).toLocaleString('ko-KR'); }
 function formatCurrencyInput(el){ const value = onlyNumber(el.value); el.value = value ? Number(value).toLocaleString('ko-KR') : ''; }
+function escapeHtml(value){ return String(value ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+
+function getTodayISO(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+function getMonthStartISO(base){
+  const d = base ? new Date(base) : new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
+}
+
+function getMonthEndISO(base){
+  const d = base ? new Date(base) : new Date();
+  const end = new Date(d.getFullYear(), d.getMonth()+1, 0);
+  return `${end.getFullYear()}-${String(end.getMonth()+1).padStart(2,'0')}-${String(end.getDate()).padStart(2,'0')}`;
+}
+
+function formatDateDisplay(value){
+  if(!value) return '-';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(value)){
+    const [y,m,d] = value.split('-');
+    return `${y}.${m}.${d}`;
+  }
+  return value;
+}
+
+function makePeriodLabel(start, end){
+  if(!start && !end) return '-';
+  return `${formatDateDisplay(start)} ~ ${formatDateDisplay(end)}`;
+}
+
+function syncMadePeriodLabel(){
+  const start = document.getElementById('madeStart').value;
+  const end = document.getElementById('madeEnd').value;
+  document.getElementById('madePeriodPreview').innerText = makePeriodLabel(start, end);
+}
 
 function monthFromDate(dateValue){
   const text = String(dateValue || '').trim();
-  const match = text.match(/^(\d{1,2})\./);
-  if(!match) return '미분류';
-  return `${parseInt(match[1],10)}월`;
+  const dashMatch = text.match(/^\d{4}-(\d{1,2})-\d{1,2}$/);
+  if(dashMatch) return `${parseInt(dashMatch[1],10)}월`;
+  const dotMatch = text.match(/^\d{4}\.(\d{1,2})\.\d{1,2}$/);
+  if(dotMatch) return `${parseInt(dotMatch[1],10)}월`;
+  return '미분류';
+}
+
+function monthSortValue(month){
+  if(month === '미분류') return 999;
+  return parseInt(month, 10) || 999;
 }
 
 function getMonths(){
-  return ['전체', ...[...new Set(rows.map(r => monthFromDate(r.date)).filter(Boolean))].sort((a,b)=>parseInt(a)-parseInt(b))];
+  return ['전체', ...[...new Set(rows.map(r => monthFromDate(r.date)).filter(Boolean))].sort((a,b)=>monthSortValue(a)-monthSortValue(b))];
+}
+
+function renderCourseButtons(){
+  const wrap = document.getElementById('courseButtons');
+  wrap.innerHTML = courseOptions.map(course => `
+    <button type="button" class="option-btn ${selectedCourse===course?'active':''}" onclick="selectCourse('${escapeHtml(course).replace(/'/g, "\\'")}')">${escapeHtml(course)}</button>
+  `).join('');
+  document.getElementById('selectedCourseLabel').innerText = selectedCourse || '선택 안됨';
+}
+
+function selectCourse(course){
+  selectedCourse = course;
+  renderCourseButtons();
+}
+
+function addCustomCourse(){
+  const input = document.getElementById('customCourseInput');
+  const value = input.value.trim();
+  if(!value) return;
+  if(!courseOptions.includes(value)) courseOptions.push(value);
+  selectedCourse = value;
+  input.value = '';
+  renderCourseButtons();
 }
 
 function openModal(){
@@ -192,19 +405,58 @@ function closeModal(){
   document.getElementById('modal').classList.remove('flex');
 }
 
+function syncDiscountButtons(){
+  document.getElementById('subjectSupportToggle').classList.toggle('active', discountState.subject);
+  document.getElementById('percentDiscountToggle').classList.toggle('active', discountState.percent);
+  document.getElementById('subjectSupportFields').classList.toggle('hidden', !discountState.subject);
+  document.getElementById('percentDiscountFields').classList.toggle('hidden', !discountState.percent);
+}
+
+function toggleDiscountType(type){
+  discountState[type] = !discountState[type];
+  if(type === 'subject' && !discountState.subject){
+    ['freePaidCount','freeSupportCount','freeSupportAmount'].forEach(id => document.getElementById(id).value = '');
+  }
+  if(type === 'percent' && !discountState.percent){
+    document.getElementById('discountRate').value = '';
+  }
+  syncDiscountButtons();
+  updatePaymentPreview();
+}
+
 function resetForm(){
-  ['date','madePeriod','student','mentor','course','price','discountRate','freePaidCount','freeSupportCount','freeSupportAmount','employeeDiscount','finalPrice','paid'].forEach(id=>document.getElementById(id).value='');
+  ['student','mentor','price','discountRate','freePaidCount','freeSupportCount','freeSupportAmount','employeeDiscount','directDiscount','finalPrice','paid','memo','remainPreview','customCourseInput'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('date').value = getTodayISO();
+  document.getElementById('madeStart').value = getMonthStartISO();
+  document.getElementById('madeEnd').value = getMonthEndISO();
+  selectedCourse = '';
+  discountState.subject = false;
+  discountState.percent = false;
+  syncDiscountButtons();
   document.getElementById('result').value='등록';
+  syncMadePeriodLabel();
+  renderCourseButtons();
+  updatePaymentPreview();
+  updateRemainPreview();
 }
 
 function updatePaymentPreview(){
   const price = num(document.getElementById('price').value);
-  const discountRate = Number(document.getElementById('discountRate').value || 0);
-  const freeSupportAmount = num(document.getElementById('freeSupportAmount').value);
+  const discountRate = discountState.percent ? Number(document.getElementById('discountRate').value || 0) : 0;
+  const freeSupportAmount = discountState.subject ? num(document.getElementById('freeSupportAmount').value) : 0;
   const employeeDiscount = num(document.getElementById('employeeDiscount').value);
+  const directDiscount = num(document.getElementById('directDiscount').value);
   const percentDiscountAmount = Math.round(price * discountRate / 100);
-  const final = Math.max(price - percentDiscountAmount - freeSupportAmount - employeeDiscount, 0);
+  const final = Math.max(price - percentDiscountAmount - freeSupportAmount - employeeDiscount - directDiscount, 0);
   document.getElementById('finalPrice').value = final ? format(final) : '';
+  updateRemainPreview();
+}
+
+function updateRemainPreview(){
+  const final = num(document.getElementById('finalPrice').value);
+  const paid = num(document.getElementById('paid').value);
+  const remain = Math.max(final - paid, 0);
+  document.getElementById('remainPreview').value = remain ? format(remain) : '0';
 }
 
 function getFilteredRows(){
@@ -212,7 +464,7 @@ function getFilteredRows(){
   return rows.filter(r => {
     const monthOk = currentMonth === '전체' || monthFromDate(r.date) === currentMonth;
     const resultOk = currentResult === '전체' || r.result === currentResult;
-    const searchOk = !keyword || [r.student, r.mentor, r.course].some(v => String(v || '').includes(keyword));
+    const searchOk = !keyword || [r.student, r.mentor, r.course, r.memo].some(v => String(v || '').includes(keyword));
     return monthOk && resultOk && searchOk;
   });
 }
@@ -224,9 +476,7 @@ function renderMonthTabs(){
 
 function renderResultFilters(){
   const wrap = document.getElementById('resultFilters');
-  ['전체','등록','COD','미등록','추등'].forEach(item => {
-    wrap.innerHTML += `<button class="chip ${currentResult===item?'active':''}" onclick="setResult('${item}')">${item}</button>`;
-  });
+  wrap.innerHTML = ['전체','등록','COD','미등록','추등'].map(item => `<button class="chip ${currentResult===item?'active':''}" onclick="setResult('${item}')">${item}</button>`).join('');
 }
 
 function renderStats(filtered){
@@ -258,14 +508,14 @@ function renderStats(filtered){
 function renderMentorCards(filtered){
   const map = {};
   filtered.forEach(r=>{
-    if(!map[r.mentor]) map[r.mentor] = { mentor:r.mentor, count:0, reg:0, cod:0, fail:0, promote:0, sales:0, remain:0 };
-    map[r.mentor].count += 1;
-    map[r.mentor].sales += Number(r.finalPrice||0);
-    map[r.mentor].remain += Math.max(Number(r.finalPrice||0)-Number(r.paid||0),0);
-    if(r.result==='등록') map[r.mentor].reg += 1;
-    if(r.result==='COD') map[r.mentor].cod += 1;
-    if(r.result==='미등록') map[r.mentor].fail += 1;
-    if(r.result==='추등') map[r.mentor].promote += 1;
+    if(!map[r.mentor || '미지정']) map[r.mentor || '미지정'] = { mentor:r.mentor || '미지정', count:0, reg:0, cod:0, fail:0, promote:0, sales:0, remain:0 };
+    map[r.mentor || '미지정'].count += 1;
+    map[r.mentor || '미지정'].sales += Number(r.finalPrice||0);
+    map[r.mentor || '미지정'].remain += Math.max(Number(r.finalPrice||0)-Number(r.paid||0),0);
+    if(r.result==='등록') map[r.mentor || '미지정'].reg += 1;
+    if(r.result==='COD') map[r.mentor || '미지정'].cod += 1;
+    if(r.result==='미등록') map[r.mentor || '미지정'].fail += 1;
+    if(r.result==='추등') map[r.mentor || '미지정'].promote += 1;
   });
 
   const mentors = Object.values(map).sort((a,b)=>b.reg-a.reg || b.sales-a.sales);
@@ -283,9 +533,9 @@ function renderMentorCards(filtered){
           <div>
             <div class="flex items-center gap-2">
               <span class="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600">#${index+1}</span>
-              <p class="font-semibold text-slate-900">${m.mentor}</p>
+              <p class="font-semibold text-slate-900">${escapeHtml(m.mentor)}</p>
             </div>
-            <p class="mt-1 text-xs text-slate-400">총 상담 ${format(m.count)}건 · 실결제 기준 매출 ${format(m.sales)}</p>
+            <p class="mt-1 text-xs text-slate-400">총 상담 ${format(m.count)}건 · 실결제 ${format(m.sales)}</p>
           </div>
           <div class="rounded-full bg-white px-3 py-1 text-xs text-slate-400 border border-slate-200">잔액 ${format(m.remain)}</div>
         </div>
@@ -313,47 +563,88 @@ function renderUrgent(filtered){
       <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
         <div class="flex items-start justify-between gap-3">
           <div>
-            <p class="font-semibold text-slate-900">${r.student || ''}</p>
-            <p class="mt-1 text-xs text-slate-400">${r.mentor || ''} · ${r.course || ''}</p>
+            <p class="font-semibold text-slate-900">${escapeHtml(r.student || '')}</p>
+            <p class="mt-1 text-xs text-slate-400">${escapeHtml(r.mentor || '')} · ${escapeHtml(r.course || '')}</p>
           </div>
           <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${tone.badge}">${r.result || ''}</span>
         </div>
-        <div class="mt-3 rounded-xl px-3 py-2 text-sm font-semibold ${tone.line}">${r.madePeriod || '-'}</div>
+        <div class="mt-3 rounded-xl px-3 py-2 text-sm font-semibold ${tone.line}">${escapeHtml(makePeriodLabel(r.madeStart, r.madeEnd))}</div>
         <div class="mt-3 flex items-center justify-between text-sm"><span class="text-slate-400">남은 금액</span><span class="font-semibold text-rose-600">${format(r.remain)}</span></div>
       </div>
     `;
   }).join('');
 }
 
+function discountSummaryHtml(r){
+  const lines = [];
+  if(r.usePercentDiscount) lines.push(`%할인 ${r.discountRate || 0}%`);
+  if(r.useSubjectSupport) lines.push(`과목지원 유료 ${r.freePaidCount || 0} / 무료 ${r.freeSupportCount || 0}`);
+  if(Number(r.freeSupportAmount||0) > 0) lines.push(`과목지원금 ${format(r.freeSupportAmount)}`);
+  if(Number(r.employeeDiscount||0) > 0) lines.push(`직원할인 ${format(r.employeeDiscount)}`);
+  if(Number(r.directDiscount||0) > 0) lines.push(`직권할인 ${format(r.directDiscount)}`);
+  if(!lines.length) lines.push('할인 없음');
+  return lines.map(line => `<div>${escapeHtml(line)}</div>`).join('');
+}
+
 function renderTable(filtered){
   const table = document.getElementById('table');
   table.innerHTML = '';
-  filtered.slice().reverse().forEach(r=>{
+  const ordered = filtered.slice().sort((a,b) => String(b.date || '').localeCompare(String(a.date || '')));
+  let lastMonth = '';
+
+  ordered.forEach(r=>{
     const actualIndex = rows.indexOf(r);
     const tone = resultTone[r.result] || resultTone['미등록'];
     const remain = Math.max(Number(r.finalPrice||0)-Number(r.paid||0),0);
+    const monthLabel = monthFromDate(r.date);
+
+    if(monthLabel !== lastMonth){
+      const monthTr = document.createElement('tr');
+      monthTr.className = 'month-row';
+      monthTr.innerHTML = `<td colspan="8" class="px-4 py-3 text-sm font-bold text-slate-700">${monthLabel}</td>`;
+      table.appendChild(monthTr);
+      lastMonth = monthLabel;
+    }
+
     const tr = document.createElement('tr');
-    tr.className = `border-b border-slate-200 ${tone.row}`;
+    tr.className = `border-b border-slate-200 align-top ${tone.row}`;
     tr.innerHTML = `
-      <td class="px-4 py-3">${r.date || ''}</td>
-      <td class="px-4 py-3"><div class="rounded-xl px-3 py-2 text-center text-sm font-semibold ${tone.line}">${r.madePeriod || '-'}</div></td>
-      <td class="px-4 py-3 font-medium text-slate-900">${r.student || ''}</td>
-      <td class="px-4 py-3 text-slate-600">${r.mentor || ''}</td>
-      <td class="px-4 py-3 text-slate-600">${r.course || ''}</td>
-      <td class="px-4 py-3">${format(r.price)}</td>
-      <td class="px-4 py-3"><div class="space-y-1 text-xs text-slate-500"><div>퍼센트: <span class="font-medium text-slate-700">${r.discountRate || 0}%</span></div><div>무료지원: <span class="font-medium text-slate-700">유료 ${r.freePaidCount || 0} / 무료 ${r.freeSupportCount || 0}</span></div><div>무료지원금: <span class="font-medium text-slate-700">${format(r.freeSupportAmount)}</span></div><div>직원할인: <span class="font-medium text-slate-700">${format(r.employeeDiscount)}</span></div></div></td>
-      <td class="px-4 py-3">${format(r.finalPrice)}</td>
-      <td class="px-4 py-3 text-sky-600">${format(r.paid)}</td>
-      <td class="px-4 py-3 ${remain > 0 ? 'font-semibold text-rose-600' : 'text-slate-400'}">${format(remain)}</td>
-      <td class="px-4 py-3"><span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${tone.badge}">${r.result || ''}</span></td>
-      <td class="px-4 py-3"><div class="flex justify-end gap-2"><button onclick="editRow(${actualIndex})" class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700">수정</button><button onclick="deleteRow(${actualIndex})" class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-600">삭제</button></div></td>
+      <td class="px-4 py-4 whitespace-nowrap font-medium text-slate-800">${escapeHtml(formatDateDisplay(r.date))}</td>
+      <td class="px-4 py-4"><div class="rounded-xl px-3 py-2 text-center text-sm font-semibold ${tone.line}">${escapeHtml(makePeriodLabel(r.madeStart, r.madeEnd))}</div></td>
+      <td class="px-4 py-4">
+        <div class="font-semibold text-slate-900">${escapeHtml(r.student || '')}</div>
+        <div class="mt-1 text-xs text-slate-500">멘토 ${escapeHtml(r.mentor || '-')}</div>
+      </td>
+      <td class="px-4 py-4">
+        <span class="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">${escapeHtml(r.course || '-')}</span>
+      </td>
+      <td class="px-4 py-4 text-xs text-slate-600 leading-6">
+        <div>총금액 <span class="font-semibold text-slate-800">${format(r.price)}</span></div>
+        <div>실결제 <span class="font-semibold text-slate-800">${format(r.finalPrice)}</span></div>
+        <div>매출 <span class="font-semibold text-sky-700">${format(r.paid)}</span></div>
+        <div>잔액 <span class="font-semibold ${remain>0?'text-rose-600':'text-slate-400'}">${format(remain)}</span></div>
+      </td>
+      <td class="px-4 py-4 text-xs text-slate-600 leading-6">${discountSummaryHtml(r)}</td>
+      <td class="px-4 py-4">
+        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${tone.badge}">${r.result || ''}</span>
+        ${r.memo ? `<div class="mt-2 max-w-[230px] text-xs text-slate-500 break-words">${escapeHtml(r.memo)}</div>` : ''}
+      </td>
+      <td class="px-4 py-4">
+        <div class="flex justify-end gap-2">
+          <button onclick="editRow(${actualIndex})" class="mini-btn">수정</button>
+          <button onclick="deleteRow(${actualIndex})" class="mini-btn border-rose-200 bg-rose-50 text-rose-600">삭제</button>
+        </div>
+      </td>
     `;
     table.appendChild(tr);
   });
+
+  if(!ordered.length){
+    table.innerHTML = `<tr><td colspan="8" class="px-4 py-10 text-center text-sm text-slate-400">표시할 상담 데이터가 없습니다.</td></tr>`;
+  }
 }
 
 function renderAll(){
-  document.getElementById('resultFilters').innerHTML = '';
   renderMonthTabs();
   renderResultFilters();
   const filtered = getFilteredRows();
@@ -368,29 +659,36 @@ function setResult(result){ currentResult = result; renderAll(); }
 
 function saveData(){
   const price = num(document.getElementById('price').value);
-  const discountRate = Number(document.getElementById('discountRate').value || 0);
-  const freePaidCount = Number(document.getElementById('freePaidCount').value || 0);
-  const freeSupportCount = Number(document.getElementById('freeSupportCount').value || 0);
-  const freeSupportAmount = num(document.getElementById('freeSupportAmount').value);
+  const discountRate = discountState.percent ? Number(document.getElementById('discountRate').value || 0) : 0;
+  const freePaidCount = discountState.subject ? Number(document.getElementById('freePaidCount').value || 0) : 0;
+  const freeSupportCount = discountState.subject ? Number(document.getElementById('freeSupportCount').value || 0) : 0;
+  const freeSupportAmount = discountState.subject ? num(document.getElementById('freeSupportAmount').value) : 0;
   const employeeDiscount = num(document.getElementById('employeeDiscount').value);
+  const directDiscount = num(document.getElementById('directDiscount').value);
   const percentDiscountAmount = Math.round(price * discountRate / 100);
-  const finalPrice = Math.max(price - percentDiscountAmount - freeSupportAmount - employeeDiscount, 0);
+  const finalPrice = Math.max(price - percentDiscountAmount - freeSupportAmount - employeeDiscount - directDiscount, 0);
 
   const obj = {
     date: document.getElementById('date').value,
-    madePeriod: document.getElementById('madePeriod').value,
-    student: document.getElementById('student').value,
-    mentor: document.getElementById('mentor').value,
-    course: document.getElementById('course').value,
+    madeStart: document.getElementById('madeStart').value,
+    madeEnd: document.getElementById('madeEnd').value,
+    madePeriod: makePeriodLabel(document.getElementById('madeStart').value, document.getElementById('madeEnd').value),
+    student: document.getElementById('student').value.trim(),
+    mentor: document.getElementById('mentor').value.trim(),
+    course: selectedCourse,
     price,
+    usePercentDiscount: discountState.percent,
     discountRate,
+    useSubjectSupport: discountState.subject,
     freePaidCount,
     freeSupportCount,
     freeSupportAmount,
     employeeDiscount,
+    directDiscount,
     finalPrice,
     paid: num(document.getElementById('paid').value),
     result: document.getElementById('result').value,
+    memo: document.getElementById('memo').value.trim(),
   };
 
   if(editIndex !== null) rows[editIndex] = obj;
@@ -406,20 +704,30 @@ function editRow(index){
   editIndex = index;
   document.getElementById('modalTitle').innerText = '상담 수정';
   document.getElementById('saveButton').innerText = '수정 저장';
-  document.getElementById('date').value = r.date || '';
-  document.getElementById('madePeriod').value = r.madePeriod || '';
+  document.getElementById('date').value = r.date || getTodayISO();
+  document.getElementById('madeStart').value = r.madeStart || getMonthStartISO(r.date);
+  document.getElementById('madeEnd').value = r.madeEnd || getMonthEndISO(r.date);
   document.getElementById('student').value = r.student || '';
   document.getElementById('mentor').value = r.mentor || '';
-  document.getElementById('course').value = r.course || '';
+  selectedCourse = r.course || '';
+  if(selectedCourse && !courseOptions.includes(selectedCourse)) courseOptions.push(selectedCourse);
+  renderCourseButtons();
   document.getElementById('price').value = r.price ? format(r.price) : '';
+  discountState.percent = Boolean(r.usePercentDiscount || Number(r.discountRate || 0) > 0);
+  discountState.subject = Boolean(r.useSubjectSupport || Number(r.freeSupportCount || 0) > 0 || Number(r.freePaidCount || 0) > 0 || Number(r.freeSupportAmount || 0) > 0);
+  syncDiscountButtons();
   document.getElementById('discountRate').value = r.discountRate || '';
   document.getElementById('freePaidCount').value = r.freePaidCount || '';
   document.getElementById('freeSupportCount').value = r.freeSupportCount || '';
   document.getElementById('freeSupportAmount').value = r.freeSupportAmount ? format(r.freeSupportAmount) : '';
   document.getElementById('employeeDiscount').value = r.employeeDiscount ? format(r.employeeDiscount) : '';
+  document.getElementById('directDiscount').value = r.directDiscount ? format(r.directDiscount) : '';
   document.getElementById('finalPrice').value = r.finalPrice ? format(r.finalPrice) : '';
   document.getElementById('paid').value = r.paid ? format(r.paid) : '';
   document.getElementById('result').value = r.result || '등록';
+  document.getElementById('memo').value = r.memo || '';
+  syncMadePeriodLabel();
+  updateRemainPreview();
   document.getElementById('modal').classList.remove('hidden');
   document.getElementById('modal').classList.add('flex');
 }
@@ -430,6 +738,8 @@ function deleteRow(index){
   renderAll();
 }
 
+renderCourseButtons();
+resetForm();
 renderAll();
 </script>
 </body>
