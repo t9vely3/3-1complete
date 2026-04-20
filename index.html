@@ -1,433 +1,436 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>상담 매출 관리</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>상담 매출 관리</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: Pretendard, system-ui, sans-serif; background:#f5f7fb; color:#0f172a; }
+  .card { background:#fff; border:1px solid rgba(148,163,184,.18); box-shadow:0 10px 30px rgba(2,6,23,.06); border-radius:20px; }
+  .chip { border:1px solid #e2e8f0; background:#fff; color:#475569; border-radius:9999px; padding:8px 14px; font-size:14px; }
+  .chip.active { background:#0f172a; color:#fff; border-color:#0f172a; }
+  .input { width:100%; border:1px solid #e2e8f0; border-radius:14px; padding:12px 14px; outline:none; }
+  .input:focus { border-color:#64748b; }
+  .btn-dark { background:#0f172a; color:#fff; border-radius:14px; padding:12px 16px; font-weight:600; }
+  .btn-light { background:#fff; color:#334155; border:1px solid #e2e8f0; border-radius:14px; padding:12px 16px; font-weight:600; }
+</style>
 </head>
-<body class="bg-slate-100 text-slate-900">
-  <div class="mx-auto max-w-7xl p-6 space-y-6">
-    <section class="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
-      <div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <p class="text-sm font-medium text-slate-500">SBS Academy 3-1</p>
-          <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-900">상담 매출 관리 대시보드</h1>
-          <p class="mt-2 text-sm text-slate-500">월별 현황, 멘토별 분석, 상담 결과 흐름을 한 화면에서 확인</p>
-        </div>
-        <div class="flex flex-wrap gap-2" id="monthTabs"></div>
-      </div>
-    </section>
+<body>
+<div class="max-w-7xl mx-auto p-6 space-y-6">
 
-    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-      <div class="rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-slate-200/70">
-        <p class="text-sm text-slate-500">총 상담</p>
-        <p id="totalCount" class="mt-3 text-2xl font-semibold tracking-tight">0</p>
+  <section class="card p-6">
+    <div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+      <div>
+        <p class="text-sm text-slate-400">SBS Academy 3-1</p>
+        <h1 class="text-3xl font-bold tracking-tight mt-1">상담 매출 관리 대시보드</h1>
+        <p class="text-sm text-slate-400 mt-2">월별 현황, 멘토별 분석, 우선 확인 건, 상담 목록을 한 화면에서 확인</p>
       </div>
-      <div class="rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-slate-200/70">
-        <p class="text-sm text-slate-500">총 매출</p>
-        <p id="totalSales" class="mt-3 text-2xl font-semibold tracking-tight">0</p>
+      <div class="flex flex-wrap gap-2 items-center">
+        <div id="monthTabs" class="flex flex-wrap gap-2"></div>
+        <button onclick="openModal()" class="btn-dark">상담 입력</button>
       </div>
-      <div class="rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-slate-200/70">
-        <p class="text-sm text-slate-500">수금</p>
-        <p id="paidSales" class="mt-3 text-2xl font-semibold tracking-tight text-sky-600">0</p>
-      </div>
-      <div class="rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-slate-200/70">
-        <p class="text-sm text-slate-500">잔액</p>
-        <p id="remainingSales" class="mt-3 text-2xl font-semibold tracking-tight text-rose-600">0</p>
-      </div>
-      <div class="rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-slate-200/70">
-        <p class="text-sm text-slate-500">등록 전환율</p>
-        <p id="conversionRate" class="mt-3 text-2xl font-semibold tracking-tight">0%</p>
-      </div>
-      <div class="rounded-[24px] bg-slate-900 p-5 text-white shadow-sm">
-        <p class="text-sm text-slate-300">결과 요약</p>
-        <div class="mt-4 flex flex-wrap gap-3 text-sm text-slate-200">
-          <span>등록 <b id="regCount">0</b></span>
-          <span>COD <b id="codCount">0</b></span>
-          <span>미등록 <b id="failCount">0</b></span>
-          <span>추등 <b id="promoteCount">0</b></span>
-        </div>
-      </div>
-    </section>
+    </div>
+  </section>
 
-    <section class="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
-      <div class="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p class="text-sm font-medium text-slate-500">입력 전용 섹션</p>
-          <h2 class="text-xl font-bold tracking-tight">상담 입력</h2>
-          <p class="mt-1 text-sm text-slate-500">상담 기입은 이 구역에서만 진행하고, 아래에서 결과를 확인하는 구조</p>
-        </div>
-        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-500">입력 후 바로 목록 반영</span>
-      </div>
-      <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <input id="date" placeholder="날짜 04.21" class="rounded-2xl border border-slate-300 p-3 outline-none focus:border-slate-500" />
-        <input id="madePeriod" placeholder="메이드 기간 04.01 ~ 04.30" class="rounded-2xl border border-slate-300 p-3 outline-none focus:border-slate-500" />
-        <input id="student" placeholder="학생명" class="rounded-2xl border border-slate-300 p-3 outline-none focus:border-slate-500" />
-        <input id="mentor" placeholder="멘토" class="rounded-2xl border border-slate-300 p-3 outline-none focus:border-slate-500" />
-        <input id="course" placeholder="과정명" class="rounded-2xl border border-slate-300 p-3 outline-none focus:border-slate-500" />
-        <input id="price" placeholder="매출" type="number" class="rounded-2xl border border-slate-300 p-3 outline-none focus:border-slate-500" />
-        <input id="paid" placeholder="수금" type="number" class="rounded-2xl border border-slate-300 p-3 outline-none focus:border-slate-500" />
-        <select id="result" class="rounded-2xl border border-slate-300 p-3 outline-none focus:border-slate-500">
-          <option>등록</option>
-          <option>COD</option>
-          <option>미등록</option>
-          <option>추등</option>
-        </select>
-      </div>
-      <button onclick="saveData()" class="mt-4 w-full rounded-2xl bg-slate-900 p-3 font-medium text-white transition hover:opacity-95">저장</button>
-    </section>
+  <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+    <div class="card p-5"><p class="text-sm text-slate-400">총 상담</p><p id="totalCount" class="text-2xl font-semibold mt-3">0</p></div>
+    <div class="card p-5"><p class="text-sm text-slate-400">총 매출</p><p id="totalSales" class="text-2xl font-semibold mt-3">0</p></div>
+    <div class="card p-5"><p class="text-sm text-slate-400">수금</p><p id="paidSales" class="text-2xl font-semibold mt-3 text-sky-600">0</p></div>
+    <div class="card p-5"><p class="text-sm text-slate-400">잔액</p><p id="remainingSales" class="text-2xl font-semibold mt-3 text-rose-600">0</p></div>
+    <div class="card p-5"><p class="text-sm text-slate-400">등록 전환율</p><p id="conversionRate" class="text-2xl font-semibold mt-3">0%</p></div>
+    <div class="rounded-[20px] bg-[#0f172a] p-5 text-white shadow-sm"><p class="text-sm text-slate-300">결과 요약</p><div class="mt-4 flex flex-wrap gap-3 text-sm"><span>등록 <b id="regCount">0</b></span><span>COD <b id="codCount">0</b></span><span>미등록 <b id="failCount">0</b></span><span>추등 <b id="promoteCount">0</b></span></div></div>
+  </section>
 
-    <section class="grid gap-6 xl:grid-cols-[1.15fr_1.85fr]">
-      <div class="space-y-6">
-        <div class="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
-          <h2 class="mb-4 text-lg font-bold tracking-tight">멘토별 성과 분석</h2>
-          <div id="mentorCards" class="space-y-3"></div>
-        </div>
+  <section class="grid gap-6 xl:grid-cols-[1.12fr_1.88fr]">
+    <div class="space-y-6">
+      <div class="card p-6">
+        <h2 class="text-lg font-bold tracking-tight mb-4">멘토별 성과 분석</h2>
+        <div id="mentorCards" class="space-y-3"></div>
+      </div>
 
-        <div class="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
-          <h2 class="mb-4 text-lg font-bold tracking-tight">우선 확인 건</h2>
-          <div id="urgentList" class="space-y-3"></div>
+      <div class="card p-6">
+        <h2 class="text-lg font-bold tracking-tight mb-4">우선 확인 건</h2>
+        <div id="urgentList" class="space-y-3"></div>
+      </div>
+    </div>
+
+    <div class="space-y-6">
+      <div class="card p-4">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <input id="search" placeholder="학생 / 멘토 / 과정 검색" class="input lg:max-w-xs" oninput="renderAll()" />
+          <div id="resultFilters" class="flex flex-wrap gap-2"></div>
         </div>
       </div>
 
-      <div class="space-y-6">
-        <div class="rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-slate-200/70">
-          <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <input id="search" placeholder="학생 / 멘토 / 과정 검색" class="w-full rounded-2xl border border-slate-300 p-3 outline-none focus:border-slate-500 lg:max-w-xs" oninput="renderAll()" />
-            <div class="flex flex-wrap gap-2" id="resultFilters"></div>
+      <div class="rounded-[20px] bg-gradient-to-r from-[#0f172a] to-[#1e293b] p-5 text-white">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p class="text-sm text-slate-300">이번 달 핵심 흐름</p>
+            <h3 class="text-xl font-semibold tracking-tight mt-1"><span id="summaryMonth">전체</span> 진행 현황</h3>
           </div>
-        </div>
-
-        <div class="rounded-[28px] bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white shadow-sm">
-          <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p class="text-sm text-slate-300">이번 달 핵심 흐름</p>
-              <h3 class="mt-1 text-xl font-semibold tracking-tight"><span id="summaryMonth">전체</span> 진행 현황</h3>
-            </div>
-            <div class="grid gap-3 sm:grid-cols-4">
-              <div class="rounded-2xl bg-white/10 px-4 py-3">
-                <p class="text-xs text-slate-300">등록</p>
-                <p id="summaryReg" class="mt-1 text-lg font-semibold">0건</p>
-              </div>
-              <div class="rounded-2xl bg-white/10 px-4 py-3">
-                <p class="text-xs text-slate-300">COD</p>
-                <p id="summaryCod" class="mt-1 text-lg font-semibold">0건</p>
-              </div>
-              <div class="rounded-2xl bg-white/10 px-4 py-3">
-                <p class="text-xs text-slate-300">미등록</p>
-                <p id="summaryFail" class="mt-1 text-lg font-semibold">0건</p>
-              </div>
-              <div class="rounded-2xl bg-white/10 px-4 py-3">
-                <p class="text-xs text-slate-300">추등</p>
-                <p id="summaryPromote" class="mt-1 text-lg font-semibold">0건</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="overflow-hidden rounded-[28px] bg-white shadow-sm ring-1 ring-slate-200/70">
-          <div class="border-b border-slate-200 bg-slate-50 px-6 py-4">
-            <h2 class="text-lg font-bold tracking-tight">상담 목록</h2>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead class="border-b border-slate-200 bg-white text-left text-slate-500">
-                <tr>
-                  <th class="px-4 py-3">날짜</th>
-                  <th class="px-4 py-3">메이드 기간</th>
-                  <th class="px-4 py-3">학생</th>
-                  <th class="px-4 py-3">멘토</th>
-                  <th class="px-4 py-3">과정</th>
-                  <th class="px-4 py-3">매출</th>
-                  <th class="px-4 py-3">수금</th>
-                  <th class="px-4 py-3">잔액</th>
-                  <th class="px-4 py-3">결과</th>
-                </tr>
-              </thead>
-              <tbody id="table"></tbody>
-            </table>
+          <div class="grid gap-3 sm:grid-cols-4">
+            <div class="rounded-2xl bg-white/10 px-4 py-3"><p class="text-xs text-slate-300">등록</p><p id="summaryReg" class="mt-1 text-lg font-semibold">0건</p></div>
+            <div class="rounded-2xl bg-white/10 px-4 py-3"><p class="text-xs text-slate-300">COD</p><p id="summaryCod" class="mt-1 text-lg font-semibold">0건</p></div>
+            <div class="rounded-2xl bg-white/10 px-4 py-3"><p class="text-xs text-slate-300">미등록</p><p id="summaryFail" class="mt-1 text-lg font-semibold">0건</p></div>
+            <div class="rounded-2xl bg-white/10 px-4 py-3"><p class="text-xs text-slate-300">추등</p><p id="summaryPromote" class="mt-1 text-lg font-semibold">0건</p></div>
           </div>
         </div>
       </div>
-    </section>
+
+      <div class="card overflow-hidden">
+        <div class="border-b border-slate-200 bg-slate-50 px-6 py-4">
+          <h2 class="text-lg font-bold tracking-tight">상담 목록</h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="border-b border-slate-200 bg-white text-left text-slate-400">
+              <tr>
+                <th class="px-4 py-3">날짜</th>
+                <th class="px-4 py-3">메이드 기간</th>
+                <th class="px-4 py-3">학생</th>
+                <th class="px-4 py-3">멘토</th>
+                <th class="px-4 py-3">과정</th>
+                <th class="px-4 py-3">총금액</th>
+                <th class="px-4 py-3">할인구성</th>
+                <th class="px-4 py-3">실결제</th>
+                <th class="px-4 py-3">수금</th>
+                <th class="px-4 py-3">잔액</th>
+                <th class="px-4 py-3">결과</th>
+                <th class="px-4 py-3 text-right">관리</th>
+              </tr>
+            </thead>
+            <tbody id="table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4">
+  <div class="w-full max-w-5xl rounded-[20px] bg-white p-6 shadow-2xl">
+    <div class="mb-5 flex items-center justify-between">
+      <div>
+        <p class="text-sm text-slate-400">입력 전용 창</p>
+        <h2 id="modalTitle" class="text-xl font-bold tracking-tight">상담 입력</h2>
+      </div>
+      <button onclick="closeModal()" class="btn-light">닫기</button>
+    </div>
+
+    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <input id="date" placeholder="날짜 04.21" class="input" />
+      <input id="madePeriod" placeholder="메이드 기간 04.01 ~ 04.30" class="input" />
+      <input id="student" placeholder="학생명" class="input" />
+      <input id="mentor" placeholder="멘토" class="input" />
+      <input id="course" placeholder="과정명" class="input" />
+      <input id="price" placeholder="총금액" inputmode="numeric" class="input" oninput="formatCurrencyInput(this); updatePaymentPreview();" />
+      <input id="discountRate" placeholder="퍼센트 할인율 %" type="number" class="input" oninput="updatePaymentPreview()" />
+      <input id="freePaidCount" placeholder="유료과목 수" type="number" class="input" />
+      <input id="freeSupportCount" placeholder="무료지원 과목 수" type="number" class="input" />
+      <input id="freeSupportAmount" placeholder="무료지원 금액" inputmode="numeric" class="input" oninput="formatCurrencyInput(this); updatePaymentPreview();" />
+      <input id="employeeDiscount" placeholder="직원할인 금액" inputmode="numeric" class="input" oninput="formatCurrencyInput(this); updatePaymentPreview();" />
+      <input id="finalPrice" placeholder="실결제 금액" class="input bg-slate-50" readonly />
+      <input id="paid" placeholder="수금" inputmode="numeric" class="input" oninput="formatCurrencyInput(this);" />
+      <select id="result" class="input">
+        <option>등록</option>
+        <option>COD</option>
+        <option>미등록</option>
+        <option>추등</option>
+      </select>
+    </div>
+
+    <div class="mt-4 flex gap-2">
+      <button onclick="closeModal()" class="btn-light w-full">취소</button>
+      <button onclick="saveData()" id="saveButton" class="btn-dark w-full">저장</button>
+    </div>
   </div>
+</div>
 
-  <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbwet8xfvIg-Td68kd0RVNm2SmIJaDxl24odo7xW-ilzCdKlr7wcg--WsREpi7vVboyveg/exec";
-    let allRows = [];
-    let currentMonth = "전체";
-    let currentResult = "전체";
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbyFoqvqr1phKYv0fbcxqQS3RQJX5EOhTob4zd8vn2nwW9ZGYSJsxIqHIabNGnU-ETXeUg/exec";
+let rows = [];
+let editIndex = null;
+let currentMonth = '전체';
+let currentResult = '전체';
 
-    const resultTone = {
-      "등록": {
-        badge: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-        row: "bg-emerald-50/45",
-        line: "border-l-4 border-emerald-500 bg-emerald-50 text-emerald-700"
-      },
-      "COD": {
-        badge: "bg-amber-50 text-amber-700 border border-amber-200",
-        row: "bg-amber-50/45",
-        line: "border-l-4 border-amber-500 bg-amber-50 text-amber-700"
-      },
-      "미등록": {
-        badge: "bg-rose-50 text-rose-700 border border-rose-200",
-        row: "bg-rose-50/45",
-        line: "border-l-4 border-rose-500 bg-rose-50 text-rose-700"
-      },
-      "추등": {
-        badge: "bg-violet-50 text-violet-700 border border-violet-200",
-        row: "bg-violet-50/45",
-        line: "border-l-4 border-violet-500 bg-violet-50 text-violet-700"
-      }
-    };
+const resultTone = {
+  등록: { badge:'bg-emerald-50 text-emerald-700 border border-emerald-200', row:'bg-emerald-50/45', line:'border-l-4 border-emerald-500 bg-emerald-50 text-emerald-700' },
+  COD: { badge:'bg-amber-50 text-amber-700 border border-amber-200', row:'bg-amber-50/45', line:'border-l-4 border-amber-500 bg-amber-50 text-amber-700' },
+  미등록: { badge:'bg-rose-50 text-rose-700 border border-rose-200', row:'bg-rose-50/45', line:'border-l-4 border-rose-500 bg-rose-50 text-rose-700' },
+  추등: { badge:'bg-violet-50 text-violet-700 border border-violet-200', row:'bg-violet-50/45', line:'border-l-4 border-violet-500 bg-violet-50 text-violet-700' }
+};
 
-    function monthFromDate(dateValue) {
-      if (!dateValue) return "미분류";
-      const text = String(dateValue).trim();
-      const match = text.match(/^(\d{1,2})\./);
-      if (!match) return "미분류";
-      return `${parseInt(match[1], 10)}월`;
-    }
+function onlyNumber(v){ return String(v || '').replace(/[^0-9]/g,''); }
+function num(v){ return Number(onlyNumber(v) || 0); }
+function format(v){ return Number(v || 0).toLocaleString('ko-KR'); }
+function formatCurrencyInput(el){ const value = onlyNumber(el.value); el.value = value ? Number(value).toLocaleString('ko-KR') : ''; }
 
-    function num(v) {
-      return Number(v || 0);
-    }
+function monthFromDate(dateValue){
+  const text = String(dateValue || '').trim();
+  const match = text.match(/^(\d{1,2})\./);
+  if(!match) return '미분류';
+  return `${parseInt(match[1],10)}월`;
+}
 
-    function format(v) {
-      return num(v).toLocaleString();
-    }
+function getMonths(){
+  return ['전체', ...[...new Set(rows.map(r => monthFromDate(r.date)).filter(Boolean))].sort((a,b)=>parseInt(a)-parseInt(b))];
+}
 
-    function getMonths(rows) {
-      const months = [...new Set(rows.map(r => monthFromDate(r.date)))].filter(Boolean);
-      return months.sort((a, b) => parseInt(a) - parseInt(b));
-    }
+function openModal(){
+  resetForm();
+  editIndex = null;
+  document.getElementById('modalTitle').innerText = '상담 입력';
+  document.getElementById('saveButton').innerText = '저장';
+  document.getElementById('modal').classList.remove('hidden');
+  document.getElementById('modal').classList.add('flex');
+}
 
-    function getFilteredRows() {
-      const keyword = document.getElementById("search").value.trim();
-      return allRows.filter(row => {
-        const monthOk = currentMonth === "전체" || monthFromDate(row.date) === currentMonth;
-        const resultOk = currentResult === "전체" || row.result === currentResult;
-        const searchOk = !keyword || [row.student, row.mentor, row.course].some(v => String(v || "").includes(keyword));
-        return monthOk && resultOk && searchOk;
-      });
-    }
+function closeModal(){
+  document.getElementById('modal').classList.add('hidden');
+  document.getElementById('modal').classList.remove('flex');
+}
 
-    function renderMonthTabs() {
-      const months = ["전체", ...getMonths(allRows)];
-      const wrap = document.getElementById("monthTabs");
-      wrap.innerHTML = months.map(month => `
-        <button
-          class="rounded-full border px-4 py-2 text-sm ${currentMonth === month ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-700'}"
-          onclick="setMonth('${month}')"
-        >${month}</button>
-      `).join("");
-    }
+function resetForm(){
+  ['date','madePeriod','student','mentor','course','price','discountRate','freePaidCount','freeSupportCount','freeSupportAmount','employeeDiscount','finalPrice','paid'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('result').value='등록';
+}
 
-    function renderResultFilters() {
-      const items = ["전체", "등록", "COD", "미등록", "추등"];
-      const wrap = document.getElementById("resultFilters");
-      wrap.innerHTML = items.map(item => `
-        <button
-          class="rounded-full border px-4 py-2 text-sm ${currentResult === item ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-700'}"
-          onclick="setResult('${item}')"
-        >${item}</button>
-      `).join("");
-    }
+function updatePaymentPreview(){
+  const price = num(document.getElementById('price').value);
+  const discountRate = Number(document.getElementById('discountRate').value || 0);
+  const freeSupportAmount = num(document.getElementById('freeSupportAmount').value);
+  const employeeDiscount = num(document.getElementById('employeeDiscount').value);
+  const percentDiscountAmount = Math.round(price * discountRate / 100);
+  const final = Math.max(price - percentDiscountAmount - freeSupportAmount - employeeDiscount, 0);
+  document.getElementById('finalPrice').value = final ? format(final) : '';
+}
 
-    function renderStats(rows) {
-      const reg = rows.filter(r => r.result === "등록").length;
-      const cod = rows.filter(r => r.result === "COD").length;
-      const fail = rows.filter(r => r.result === "미등록").length;
-      const promote = rows.filter(r => r.result === "추등").length;
-      const totalSales = rows.reduce((s, r) => s + num(r.price), 0);
-      const paidSales = rows.reduce((s, r) => s + num(r.paid), 0);
-      const remainingSales = Math.max(totalSales - paidSales, 0);
-      const conversion = rows.length ? Math.round((reg / rows.length) * 100) : 0;
+function getFilteredRows(){
+  const keyword = document.getElementById('search').value.trim();
+  return rows.filter(r => {
+    const monthOk = currentMonth === '전체' || monthFromDate(r.date) === currentMonth;
+    const resultOk = currentResult === '전체' || r.result === currentResult;
+    const searchOk = !keyword || [r.student, r.mentor, r.course].some(v => String(v || '').includes(keyword));
+    return monthOk && resultOk && searchOk;
+  });
+}
 
-      document.getElementById("totalCount").innerText = rows.length;
-      document.getElementById("regCount").innerText = reg;
-      document.getElementById("codCount").innerText = cod;
-      document.getElementById("failCount").innerText = fail;
-      document.getElementById("promoteCount").innerText = promote;
-      document.getElementById("totalSales").innerText = format(totalSales);
-      document.getElementById("paidSales").innerText = format(paidSales);
-      document.getElementById("remainingSales").innerText = format(remainingSales);
-      document.getElementById("conversionRate").innerText = `${conversion}%`;
-      document.getElementById("summaryMonth").innerText = currentMonth;
-      document.getElementById("summaryReg").innerText = `${reg}건`;
-      document.getElementById("summaryCod").innerText = `${cod}건`;
-      document.getElementById("summaryFail").innerText = `${fail}건`;
-      document.getElementById("summaryPromote").innerText = `${promote}건`;
-    }
+function renderMonthTabs(){
+  const wrap = document.getElementById('monthTabs');
+  wrap.innerHTML = getMonths().map(month => `<button class="chip ${currentMonth===month?'active':''}" onclick="setMonth('${month}')">${month}</button>`).join('');
+}
 
-    function renderMentorCards(rows) {
-      const mentorMap = {};
-      rows.forEach(row => {
-        if (!mentorMap[row.mentor]) {
-          mentorMap[row.mentor] = { mentor: row.mentor, count: 0, reg: 0, cod: 0, fail: 0, promote: 0, sales: 0, remaining: 0 };
-        }
-        mentorMap[row.mentor].count += 1;
-        mentorMap[row.mentor].sales += num(row.price);
-        mentorMap[row.mentor].remaining += Math.max(num(row.price) - num(row.paid), 0);
-        if (row.result === "등록") mentorMap[row.mentor].reg += 1;
-        if (row.result === "COD") mentorMap[row.mentor].cod += 1;
-        if (row.result === "미등록") mentorMap[row.mentor].fail += 1;
-        if (row.result === "추등") mentorMap[row.mentor].promote += 1;
-      });
+function renderResultFilters(){
+  const wrap = document.getElementById('resultFilters');
+  ['전체','등록','COD','미등록','추등'].forEach(item => {
+    wrap.innerHTML += `<button class="chip ${currentResult===item?'active':''}" onclick="setResult('${item}')">${item}</button>`;
+  });
+}
 
-      const mentors = Object.values(mentorMap).sort((a, b) => b.reg - a.reg || b.sales - a.sales);
-      const wrap = document.getElementById("mentorCards");
+function renderStats(filtered){
+  const reg = filtered.filter(r => r.result==='등록').length;
+  const cod = filtered.filter(r => r.result==='COD').length;
+  const fail = filtered.filter(r => r.result==='미등록').length;
+  const promote = filtered.filter(r => r.result==='추등').length;
+  const total = filtered.reduce((s,r)=>s+Number(r.finalPrice||0),0);
+  const paid = filtered.reduce((s,r)=>s+Number(r.paid||0),0);
+  const remain = filtered.reduce((s,r)=>s+Math.max(Number(r.finalPrice||0)-Number(r.paid||0),0),0);
+  const conversion = filtered.length ? Math.round((reg/filtered.length)*100) : 0;
 
-      if (!mentors.length) {
-        wrap.innerHTML = '<div class="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">표시할 데이터가 없습니다.</div>';
-        return;
-      }
+  document.getElementById('totalCount').innerText = format(filtered.length);
+  document.getElementById('totalSales').innerText = format(total);
+  document.getElementById('paidSales').innerText = format(paid);
+  document.getElementById('remainingSales').innerText = format(remain);
+  document.getElementById('conversionRate').innerText = `${conversion}%`;
+  document.getElementById('regCount').innerText = format(reg);
+  document.getElementById('codCount').innerText = format(cod);
+  document.getElementById('failCount').innerText = format(fail);
+  document.getElementById('promoteCount').innerText = format(promote);
+  document.getElementById('summaryMonth').innerText = currentMonth;
+  document.getElementById('summaryReg').innerText = `${format(reg)}건`;
+  document.getElementById('summaryCod').innerText = `${format(cod)}건`;
+  document.getElementById('summaryFail').innerText = `${format(fail)}건`;
+  document.getElementById('summaryPromote').innerText = `${format(promote)}건`;
+}
 
-      wrap.innerHTML = mentors.map((m, index) => {
-        const regRate = m.count ? Math.round((m.reg / m.count) * 100) : 0;
-        const codRate = m.count ? Math.round((m.cod / m.count) * 100) : 0;
-        const failRate = m.count ? Math.round((m.fail / m.count) * 100) : 0;
-        const promoteRate = m.count ? Math.round((m.promote / m.count) * 100) : 0;
-        return `
-          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="rounded-full border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600">#${index + 1}</span>
-                  <p class="font-semibold text-slate-900">${m.mentor}</p>
-                </div>
-                <p class="mt-1 text-xs text-slate-500">총 상담 ${m.count}건 · 총 상담 매출 ${format(m.sales)}</p>
-              </div>
-              <div class="rounded-full bg-white px-3 py-1 text-xs text-slate-500 border border-slate-200">잔액 ${format(m.remaining)}</div>
+function renderMentorCards(filtered){
+  const map = {};
+  filtered.forEach(r=>{
+    if(!map[r.mentor]) map[r.mentor] = { mentor:r.mentor, count:0, reg:0, cod:0, fail:0, promote:0, sales:0, remain:0 };
+    map[r.mentor].count += 1;
+    map[r.mentor].sales += Number(r.finalPrice||0);
+    map[r.mentor].remain += Math.max(Number(r.finalPrice||0)-Number(r.paid||0),0);
+    if(r.result==='등록') map[r.mentor].reg += 1;
+    if(r.result==='COD') map[r.mentor].cod += 1;
+    if(r.result==='미등록') map[r.mentor].fail += 1;
+    if(r.result==='추등') map[r.mentor].promote += 1;
+  });
+
+  const mentors = Object.values(map).sort((a,b)=>b.reg-a.reg || b.sales-a.sales);
+  const wrap = document.getElementById('mentorCards');
+  if(!mentors.length){ wrap.innerHTML = '<div class="rounded-xl bg-slate-50 p-4 text-sm text-slate-400">표시할 데이터가 없습니다.</div>'; return; }
+
+  wrap.innerHTML = mentors.map((m,index)=>{
+    const regRate = m.count ? Math.round(m.reg/m.count*100) : 0;
+    const codRate = m.count ? Math.round(m.cod/m.count*100) : 0;
+    const failRate = m.count ? Math.round(m.fail/m.count*100) : 0;
+    const promoteRate = m.count ? Math.round(m.promote/m.count*100) : 0;
+    return `
+      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600">#${index+1}</span>
+              <p class="font-semibold text-slate-900">${m.mentor}</p>
             </div>
-            <div class="mt-4 grid grid-cols-2 gap-2 text-center text-sm">
-              <div class="rounded-xl bg-white p-3"><p class="text-xs text-slate-500">등록률</p><p class="mt-1 font-semibold text-emerald-600">${regRate}%</p></div>
-              <div class="rounded-xl bg-white p-3"><p class="text-xs text-slate-500">COD률</p><p class="mt-1 font-semibold text-amber-600">${codRate}%</p></div>
-              <div class="rounded-xl bg-white p-3"><p class="text-xs text-slate-500">미등록률</p><p class="mt-1 font-semibold text-rose-600">${failRate}%</p></div>
-              <div class="rounded-xl bg-white p-3"><p class="text-xs text-slate-500">추등률</p><p class="mt-1 font-semibold text-violet-600">${promoteRate}%</p></div>
-            </div>
+            <p class="mt-1 text-xs text-slate-400">총 상담 ${format(m.count)}건 · 실결제 기준 매출 ${format(m.sales)}</p>
           </div>
-        `;
-      }).join("");
-    }
+          <div class="rounded-full bg-white px-3 py-1 text-xs text-slate-400 border border-slate-200">잔액 ${format(m.remain)}</div>
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-2 text-center text-sm">
+          <div class="rounded-xl bg-white p-3"><p class="text-xs text-slate-400">등록률</p><p class="mt-1 font-semibold text-emerald-600">${regRate}%</p></div>
+          <div class="rounded-xl bg-white p-3"><p class="text-xs text-slate-400">COD률</p><p class="mt-1 font-semibold text-amber-600">${codRate}%</p></div>
+          <div class="rounded-xl bg-white p-3"><p class="text-xs text-slate-400">미등록률</p><p class="mt-1 font-semibold text-rose-600">${failRate}%</p></div>
+          <div class="rounded-xl bg-white p-3"><p class="text-xs text-slate-400">추등률</p><p class="mt-1 font-semibold text-violet-600">${promoteRate}%</p></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
 
-    function renderUrgent(rows) {
-      const urgent = rows
-        .map(row => ({ ...row, remaining: Math.max(num(row.price) - num(row.paid), 0) }))
-        .filter(row => row.result !== "등록" || row.remaining > 0)
-        .sort((a, b) => b.remaining - a.remaining)
-        .slice(0, 4);
-
-      const wrap = document.getElementById("urgentList");
-      if (!urgent.length) {
-        wrap.innerHTML = '<div class="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">확인할 잔액 건이 없습니다.</div>';
-        return;
-      }
-
-      wrap.innerHTML = urgent.map(row => {
-        const tone = resultTone[row.result] || resultTone["미등록"];
-        return `
-          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <p class="font-semibold text-slate-900">${row.student || ''}</p>
-                <p class="mt-1 text-xs text-slate-500">${row.mentor || ''} · ${row.course || ''}</p>
-              </div>
-              <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${tone.badge}">${row.result || ''}</span>
-            </div>
-            <div class="mt-3 rounded-xl px-3 py-2 text-sm font-semibold ${tone.line}">${row.madePeriod || '-'}</div>
-            <div class="mt-3 flex items-center justify-between text-sm">
-              <span class="text-slate-500">남은 금액</span>
-              <span class="font-semibold text-rose-600">${format(row.remaining)}</span>
-            </div>
+function renderUrgent(filtered){
+  const urgent = filtered.map(r=>({ ...r, remain: Math.max(Number(r.finalPrice||0)-Number(r.paid||0),0) }))
+    .filter(r => r.result !== '등록' || r.remain > 0)
+    .sort((a,b)=>b.remain-a.remain)
+    .slice(0,4);
+  const wrap = document.getElementById('urgentList');
+  if(!urgent.length){ wrap.innerHTML = '<div class="rounded-xl bg-slate-50 p-4 text-sm text-slate-400">확인할 잔액 건이 없습니다.</div>'; return; }
+  wrap.innerHTML = urgent.map(r=>{
+    const tone = resultTone[r.result] || resultTone['미등록'];
+    return `
+      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="font-semibold text-slate-900">${r.student || ''}</p>
+            <p class="mt-1 text-xs text-slate-400">${r.mentor || ''} · ${r.course || ''}</p>
           </div>
-        `;
-      }).join("");
-    }
+          <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${tone.badge}">${r.result || ''}</span>
+        </div>
+        <div class="mt-3 rounded-xl px-3 py-2 text-sm font-semibold ${tone.line}">${r.madePeriod || '-'}</div>
+        <div class="mt-3 flex items-center justify-between text-sm"><span class="text-slate-400">남은 금액</span><span class="font-semibold text-rose-600">${format(r.remain)}</span></div>
+      </div>
+    `;
+  }).join('');
+}
 
-    function renderTable(rows) {
-      const table = document.getElementById("table");
-      table.innerHTML = "";
+function renderTable(filtered){
+  const table = document.getElementById('table');
+  table.innerHTML = '';
+  filtered.slice().reverse().forEach(r=>{
+    const actualIndex = rows.indexOf(r);
+    const tone = resultTone[r.result] || resultTone['미등록'];
+    const remain = Math.max(Number(r.finalPrice||0)-Number(r.paid||0),0);
+    const tr = document.createElement('tr');
+    tr.className = `border-b border-slate-200 ${tone.row}`;
+    tr.innerHTML = `
+      <td class="px-4 py-3">${r.date || ''}</td>
+      <td class="px-4 py-3"><div class="rounded-xl px-3 py-2 text-center text-sm font-semibold ${tone.line}">${r.madePeriod || '-'}</div></td>
+      <td class="px-4 py-3 font-medium text-slate-900">${r.student || ''}</td>
+      <td class="px-4 py-3 text-slate-600">${r.mentor || ''}</td>
+      <td class="px-4 py-3 text-slate-600">${r.course || ''}</td>
+      <td class="px-4 py-3">${format(r.price)}</td>
+      <td class="px-4 py-3"><div class="space-y-1 text-xs text-slate-500"><div>퍼센트: <span class="font-medium text-slate-700">${r.discountRate || 0}%</span></div><div>무료지원: <span class="font-medium text-slate-700">유료 ${r.freePaidCount || 0} / 무료 ${r.freeSupportCount || 0}</span></div><div>무료지원금: <span class="font-medium text-slate-700">${format(r.freeSupportAmount)}</span></div><div>직원할인: <span class="font-medium text-slate-700">${format(r.employeeDiscount)}</span></div></div></td>
+      <td class="px-4 py-3">${format(r.finalPrice)}</td>
+      <td class="px-4 py-3 text-sky-600">${format(r.paid)}</td>
+      <td class="px-4 py-3 ${remain > 0 ? 'font-semibold text-rose-600' : 'text-slate-400'}">${format(remain)}</td>
+      <td class="px-4 py-3"><span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${tone.badge}">${r.result || ''}</span></td>
+      <td class="px-4 py-3"><div class="flex justify-end gap-2"><button onclick="editRow(${actualIndex})" class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700">수정</button><button onclick="deleteRow(${actualIndex})" class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-600">삭제</button></div></td>
+    `;
+    table.appendChild(tr);
+  });
+}
 
-      rows.slice().reverse().forEach(row => {
-        const tone = resultTone[row.result] || resultTone["미등록"];
-        const price = num(row.price);
-        const paid = num(row.paid);
-        const remaining = Math.max(price - paid, 0);
-        const tr = document.createElement("tr");
-        tr.className = `border-b border-slate-200 ${tone.row}`;
-        tr.innerHTML = `
-          <td class="px-4 py-3">${row.date || ""}</td>
-          <td class="px-4 py-3"><div class="rounded-xl px-3 py-2 text-center text-sm font-semibold ${tone.line}">${row.madePeriod || "-"}</div></td>
-          <td class="px-4 py-3 font-medium text-slate-900">${row.student || ""}</td>
-          <td class="px-4 py-3 text-slate-600">${row.mentor || ""}</td>
-          <td class="px-4 py-3 text-slate-600">${row.course || ""}</td>
-          <td class="px-4 py-3">${format(price)}</td>
-          <td class="px-4 py-3 text-sky-600">${format(paid)}</td>
-          <td class="px-4 py-3 ${remaining > 0 ? 'font-semibold text-rose-600' : 'text-slate-500'}">${format(remaining)}</td>
-          <td class="px-4 py-3"><span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${tone.badge}">${row.result || ''}</span></td>
-        `;
-        table.appendChild(tr);
-      });
-    }
+function renderAll(){
+  document.getElementById('resultFilters').innerHTML = '';
+  renderMonthTabs();
+  renderResultFilters();
+  const filtered = getFilteredRows();
+  renderStats(filtered);
+  renderMentorCards(filtered);
+  renderUrgent(filtered);
+  renderTable(filtered);
+}
 
-    function renderAll() {
-      renderMonthTabs();
-      renderResultFilters();
-      const filtered = getFilteredRows();
-      renderStats(filtered);
-      renderMentorCards(filtered);
-      renderUrgent(filtered);
-      renderTable(filtered);
-    }
+function setMonth(month){ currentMonth = month; renderAll(); }
+function setResult(result){ currentResult = result; renderAll(); }
 
-    function setMonth(month) {
-      currentMonth = month;
-      renderAll();
-    }
+function saveData(){
+  const price = num(document.getElementById('price').value);
+  const discountRate = Number(document.getElementById('discountRate').value || 0);
+  const freePaidCount = Number(document.getElementById('freePaidCount').value || 0);
+  const freeSupportCount = Number(document.getElementById('freeSupportCount').value || 0);
+  const freeSupportAmount = num(document.getElementById('freeSupportAmount').value);
+  const employeeDiscount = num(document.getElementById('employeeDiscount').value);
+  const percentDiscountAmount = Math.round(price * discountRate / 100);
+  const finalPrice = Math.max(price - percentDiscountAmount - freeSupportAmount - employeeDiscount, 0);
 
-    function setResult(result) {
-      currentResult = result;
-      renderAll();
-    }
+  const obj = {
+    date: document.getElementById('date').value,
+    madePeriod: document.getElementById('madePeriod').value,
+    student: document.getElementById('student').value,
+    mentor: document.getElementById('mentor').value,
+    course: document.getElementById('course').value,
+    price,
+    discountRate,
+    freePaidCount,
+    freeSupportCount,
+    freeSupportAmount,
+    employeeDiscount,
+    finalPrice,
+    paid: num(document.getElementById('paid').value),
+    result: document.getElementById('result').value,
+  };
 
-    async function loadData() {
-      const res = await fetch(API_URL);
-      allRows = await res.json();
-      renderAll();
-    }
+  if(editIndex !== null) rows[editIndex] = obj;
+  else rows.push(obj);
 
-    async function saveData() {
-      const body = {
-        student: document.getElementById("student").value,
-        mentor: document.getElementById("mentor").value,
-        course: document.getElementById("course").value,
-        date: document.getElementById("date").value,
-        madePeriod: document.getElementById("madePeriod").value,
-        price: document.getElementById("price").value,
-        paid: document.getElementById("paid").value,
-        result: document.getElementById("result").value,
-      };
+  closeModal();
+  renderAll();
+}
 
-      await fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify(body),
-      });
+function editRow(index){
+  const r = rows[index];
+  if(!r) return;
+  editIndex = index;
+  document.getElementById('modalTitle').innerText = '상담 수정';
+  document.getElementById('saveButton').innerText = '수정 저장';
+  document.getElementById('date').value = r.date || '';
+  document.getElementById('madePeriod').value = r.madePeriod || '';
+  document.getElementById('student').value = r.student || '';
+  document.getElementById('mentor').value = r.mentor || '';
+  document.getElementById('course').value = r.course || '';
+  document.getElementById('price').value = r.price ? format(r.price) : '';
+  document.getElementById('discountRate').value = r.discountRate || '';
+  document.getElementById('freePaidCount').value = r.freePaidCount || '';
+  document.getElementById('freeSupportCount').value = r.freeSupportCount || '';
+  document.getElementById('freeSupportAmount').value = r.freeSupportAmount ? format(r.freeSupportAmount) : '';
+  document.getElementById('employeeDiscount').value = r.employeeDiscount ? format(r.employeeDiscount) : '';
+  document.getElementById('finalPrice').value = r.finalPrice ? format(r.finalPrice) : '';
+  document.getElementById('paid').value = r.paid ? format(r.paid) : '';
+  document.getElementById('result').value = r.result || '등록';
+  document.getElementById('modal').classList.remove('hidden');
+  document.getElementById('modal').classList.add('flex');
+}
 
-      document.getElementById("student").value = "";
-      document.getElementById("mentor").value = "";
-      document.getElementById("course").value = "";
-      document.getElementById("date").value = "";
-      document.getElementById("madePeriod").value = "";
-      document.getElementById("price").value = "";
-      document.getElementById("paid").value = "";
-      document.getElementById("result").value = "등록";
+function deleteRow(index){
+  if(!confirm('이 상담 기록을 삭제할까요?')) return;
+  rows.splice(index,1);
+  renderAll();
+}
 
-      await loadData();
-    }
-
-    loadData();
-  </script>
+renderAll();
+</script>
 </body>
 </html>
