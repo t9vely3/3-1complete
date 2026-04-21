@@ -200,6 +200,75 @@
 </div>
 
 <script>
+
+
+
+function saveData(){
+
+  const data = {
+
+    납부기한: document.getElementById("deadline").value,
+
+    학생명: document.getElementById("student").value,
+
+    멘토: document.getElementById("mentor").value,
+
+    과정: selectedCourse,
+
+    총금액: totalPrice,
+
+    따즈아금액: ddazuaPrice,
+
+    ACP금액: acpPrice,
+
+    직권할인: specialDiscount,
+
+    할인방식: discountType,
+
+    할인율: discountPercent,
+
+    과목지원금액: supportAmount,
+
+    실결제: finalPrice,
+
+    매출: paidAmount,
+
+    잔액: remainAmount,
+
+    결제권자: payer,
+
+    결과: result,
+
+    특이사항: memo
+
+  };
+
+  fetch(API_URL, {
+
+    method: "POST",
+
+    body: JSON.stringify(data),
+
+    headers: {
+      "Content-Type": "application/json"
+    }
+
+  })
+  .then(res => res.text())
+  .then(() => {
+
+    alert("저장 완료");
+
+  })
+  .catch(err => {
+
+    alert("저장 실패");
+
+  });
+
+}
+
+const API_URL = "https://script.google.com/macros/s/AKfycbzk30FKutpl4bzb45IYZdci3MEqHnmA2eBzzsGlFQAbZlPRtBoH_7POQLTccIXqY4qf/exec";
 const defaultCourses=['편집','모션','실내','웹툰','드로잉','마야','웹','자격증'];
 const payors=['본인','부모님','친구','지인','기타'];
 const quickPrices=[320000,390000,500000,990000];
