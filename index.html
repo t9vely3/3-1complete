@@ -9,7 +9,7 @@
   <style>
     :root{
       --bg:#f5f7fb; --card:#fff; --line:#e2e8f0; --text:#0f172a; --muted:#94a3b8; --navy:#0f172a;
-      --green:#10b981; --amber:#f59e0b; --red:#ef4444; --violet:#8b5cf6;
+      --green:#10b981; --amber:#f59e0b; --red:#ef4444; --violet:#3b82f6; --black:#111827;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -33,7 +33,13 @@
     .badge.reg{background:#ecfdf5;color:#047857;border-color:#a7f3d0}
     .badge.cod{background:#fffbeb;color:#b45309;border-color:#fde68a}
     .badge.fail{background:#fef2f2;color:#dc2626;border-color:#fecaca}
-    .badge.up{background:#f5f3ff;color:#7c3aed;border-color:#ddd6fe}
+    .badge.up{background:#eff6ff;color:#2563eb;border-color:#bfdbfe}
+    .badge.incomplete{background:#111827;color:#fff;border-color:#111827}
+    tr.row-reg td:first-child{box-shadow: inset 4px 0 0 #10b981}
+    tr.row-cod td:first-child{box-shadow: inset 4px 0 0 #f59e0b}
+    tr.row-fail td:first-child{box-shadow: inset 4px 0 0 #ef4444}
+    tr.row-up td:first-child{box-shadow: inset 4px 0 0 #3b82f6}
+    tr.row-incomplete td:first-child{box-shadow: inset 4px 0 0 #111827}
     .status-dot{width:8px;height:8px;border-radius:999px;display:inline-block}
     .summary-box{background:linear-gradient(90deg,#081126 0%,#15274d 100%);color:#fff}
     .summary-pill{background:rgba(255,255,255,.12);border-radius:16px;padding:12px 14px}
@@ -61,7 +67,7 @@
     .date-field::after{content:'📅';position:absolute;right:11px;top:10px;font-size:14px;opacity:.75;pointer-events:none}
     .date-field input::-webkit-calendar-picker-indicator{opacity:0;position:absolute;inset:0;width:100%;height:100%;cursor:pointer}
     .discount-side{min-height:104px}
-    .helper{height:42px;border:1px dashed #cbd5e1;border-radius:12px;background:#f8fafc;padding:0 12px;display:flex;align-items:center;font-size:13px;color:#64748b}
+    .helper{height:42px;border:1px dashed #cbd5e1;border-radius:12px;background:#f8fafc;padding:0 12px;display:flex;align-items:center;font-size:13px;color:#64748b;white-space:nowrap}
     .compact-icon{width:30px;height:30px;padding:0;border-radius:10px}
     .top-panels{display:none}
     .top-panels.show{display:grid}
@@ -93,7 +99,7 @@
       <div class="card metric"><div class="k">총 매출</div><div class="v mono text-sky-600" id="paidSales">0</div></div>
       <div class="card metric"><div class="k">잔액</div><div class="v mono text-rose-600" id="remainingSales">0</div></div>
       <div class="card metric"><div class="k">등록 전환율</div><div class="v mono" id="conversionRate">0%</div></div>
-      <div class="card metric summary-box"><div class="k text-slate-300">결과 요약</div><div class="mt-3 grid grid-cols-2 gap-y-2 text-sm font-black"><span>등록 <b id="regCount">0</b></span><span>COD <b id="codCount">0</b></span><span>미등록 <b id="failCount">0</b></span><span>추등 <b id="promoteCount">0</b></span></div></div>
+      <div class="card metric summary-box"><div class="k text-slate-300">결과 요약</div><div class="mt-3 grid grid-cols-2 gap-y-2 text-sm font-black"><span>등록 <b id="regCount">0</b></span><span>COD <b id="codCount">0</b></span><span>미등록 <b id="failCount">0</b></span><span>추등 <b id="promoteCount">0</b></span><span>미완료 <b id="incompleteCount">0</b></span></div></div>
     </section>
 
     <section id="topPanels" class="top-panels gap-3 xl:grid-cols-2">
@@ -117,11 +123,12 @@
         <p class="text-sm text-slate-300">이번 달 핵심 흐름</p>
         <h2 class="text-[18px] font-black mt-1"><span id="summaryMonth">전체</span> 진행 현황</h2>
       </div>
-      <div class="grid gap-3 sm:grid-cols-4">
+      <div class="grid gap-3 sm:grid-cols-5">
         <div class="summary-pill"><div class="text-xs text-slate-300">등록</div><div class="mt-1 text-[18px] font-black" id="summaryReg">0건</div></div>
         <div class="summary-pill"><div class="text-xs text-slate-300">COD</div><div class="mt-1 text-[18px] font-black" id="summaryCod">0건</div></div>
         <div class="summary-pill"><div class="text-xs text-slate-300">미등록</div><div class="mt-1 text-[18px] font-black" id="summaryFail">0건</div></div>
         <div class="summary-pill"><div class="text-xs text-slate-300">추등</div><div class="mt-1 text-[18px] font-black" id="summaryPromote">0건</div></div>
+        <div class="summary-pill"><div class="text-xs text-slate-300">미완료</div><div class="mt-1 text-[18px] font-black" id="summaryIncomplete">0건</div></div>
       </div>
     </section>
 
@@ -194,7 +201,7 @@
               <div>
                 <label class="section-title">결과</label>
                 <select id="result" class="select">
-                  <option>등록</option><option>COD</option><option>미등록</option><option>추등</option>
+                  <option>등록</option><option>COD</option><option>미등록</option><option>추등</option><option>미완료</option>
                 </select>
               </div>
             </div>
@@ -227,22 +234,21 @@
 
             <div>
               <div class="section-title">금액 정보</div>
-              <div class="grid gap-3 md:grid-cols-4">
-                <div><label class="section-title">총금액</label><input id="price" class="input mono" inputmode="numeric" oninput="formatCurrencyInput(this); updatePaymentPreview()" /></div>
-                <div><label class="section-title">직원할인</label><input id="employeeDiscount" class="input mono" inputmode="numeric" oninput="formatCurrencyInput(this); updatePaymentPreview()" /></div>
+              <div class="grid gap-3 md:grid-cols-3">
+                <div><label class="section-title">총금액</label><input id="price" class="input mono" inputmode="numeric" oninput="formatCurrencyInput(this); syncBaseAmountsFromPrice(); updatePaymentPreview()" /></div>
                 <div><label class="section-title">직권할인</label><input id="directDiscount" class="input mono" inputmode="numeric" oninput="formatCurrencyInput(this); updatePaymentPreview()" /></div>
                 <div><label class="section-title">실결제 금액</label><input id="finalPrice" class="input mono bg-slate-50" readonly /></div>
               </div>
-            </div>
-
-            <div>
-              <div class="section-title">빠른 금액 입력</div>
-              <div id="quickButtons" class="flex flex-wrap gap-2"></div>
-            </div>
-
-            <div>
-              <div class="section-title">ACP 과목 빠른 입력</div>
-              <div id="acpButtons" class="flex flex-wrap gap-2"></div>
+              <div class="grid gap-3 md:grid-cols-2 mt-3">
+                <div>
+                  <div class="section-title">따즈아 빠른 입력</div>
+                  <div id="quickButtons" class="flex flex-wrap gap-2"></div>
+                </div>
+                <div>
+                  <div class="section-title">ACP 과목 빠른 입력</div>
+                  <div id="acpButtons" class="flex flex-wrap gap-2"></div>
+                </div>
+              </div>
             </div>
 
             <div class="detail-card">
@@ -262,12 +268,17 @@
                     </div>
                   </div>
                   <div id="discountPercent" class="hidden">
-                    <div class="grid gap-3 md:grid-cols-[140px_120px_1fr] items-end">
-                      <div><label class="section-title">할인율</label><input id="discountRate" type="number" min="0" class="input mono" oninput="updatePaymentPreview()" /></div>
-                      <div><label class="section-title">표기</label><div class="helper"><span id="discountPercentText">0%</span></div></div>
+                    <div class="grid gap-3 md:grid-cols-[180px_1fr] items-end">
+                      <div>
+                        <label class="section-title">할인율</label>
+                        <div class="relative">
+                          <input id="discountRate" type="number" min="0" class="input mono pr-8" oninput="updatePaymentPreview()" />
+                          <span class="absolute right-3 top-[10px] text-sm text-slate-500 font-bold">%</span>
+                        </div>
+                      </div>
                       <div><label class="section-title">할인금액</label><div class="helper"><span id="percentDiscountAmountText">0원</span></div></div>
                     </div>
-                  </div>
+                  </div></div>
                 </div>
               </div>
             </div>
@@ -299,15 +310,9 @@
   <script>
     const defaultCourses = ['편집','모션','실내','웹툰','드로잉','마야','웹','자격증'];
     const payors = ['본인','부모님','친구','지인','기타'];
-    const quickPrices = [320000,390000,500000,990000];
-    const acpPrices = {
-      'ACP 1과목':320000,
-      'ACP 2과목':390000,
-      'ACP 3과목':500000,
-      'ACP 4과목':990000,
-      'ACP 5과목':1290000
-    };
-    const resultClass = {등록:'reg', COD:'cod', 미등록:'fail', 추등:'up'};
+    const ddazuaPrices = [320000,390000,500000,990000];
+    const acpPrices = {'ACP 1과목':320000,'ACP 2과목':390000,'ACP 3과목':500000,'ACP 4과목':990000,'ACP 5과목':1290000};
+    const resultClass = {등록:'reg', COD:'cod', 미등록:'fail', 추등:'up', 미완료:'incomplete'};
 
     let rows = [];
     let editIndex = null;
@@ -319,6 +324,8 @@
     let discountType = '';
     let courseOptions = [...defaultCourses];
     let topPanelMode = '';
+    let baseDdazua = 0;
+    let baseAcp = 0;
 
     function onlyNumber(v){ return String(v || '').replace(/[^0-9]/g, ''); }
     function num(v){ return Number(onlyNumber(v) || 0); }
@@ -330,6 +337,7 @@
     function monthLabel(v){ if(!v) return '미분류'; const m=String(v).match(/^(\d{4})-(\d{2})-/); return m ? `${parseInt(m[2],10)}월` : '미분류'; }
     function formatCurrencyInput(el){ const v=onlyNumber(el.value); el.value = v ? format(v) : ''; }
     function dateValue(d){ return String(d || '').replace(/[^0-9]/g, ''); }
+    function effectiveResult(r){ const remain = Math.max(Number(r.finalPrice || 0) - Number(r.paid || 0), 0); if(remain===0 && Number(r.finalPrice||0)>0) return '등록'; if(r.result==='미완료') return '미완료'; if(r.dueDate && remain>0 && String(r.dueDate).replace(/-/g,'') < today().replace(/-/g,'')) return '미완료'; return r.result || '미등록'; }
     function resultBadge(result){ const cls = resultClass[result] || 'fail'; return `<span class="badge ${cls}">${escapeHtml(result)}</span>`; }
     function remainOf(r){ return Math.max(Number(r.finalPrice || 0) - Number(r.paid || 0), 0); }
 
@@ -355,12 +363,22 @@
     function setPayor(v){ selectedPayor = v; renderPayors(); }
 
     function renderQuickButtons(){
-      document.getElementById('quickButtons').innerHTML = quickPrices.map(v => `<button type="button" class="quick-btn" onclick="setPrice(${v})">${format(v)}</button>`).join('');
-      document.getElementById('acpButtons').innerHTML = Object.entries(acpPrices).map(([label,price]) => `<button type="button" class="quick-btn" onclick="setPrice(${price})">${label}</button>`).join('');
+      document.getElementById('quickButtons').innerHTML = ddazuaPrices.map(v => `<button type="button" class="quick-btn" onclick="setDdazua(${v})">${format(v)}</button>`).join('');
+      document.getElementById('acpButtons').innerHTML = Object.entries(acpPrices).map(([label,price]) => `<button type="button" class="quick-btn" onclick="setAcp(${price})">${label}</button>`).join('');
     }
-    function setPrice(v){ document.getElementById('price').value = format(v); updatePaymentPreview(); }
+    function updateCombinedPrice(){
+      const total = baseDdazua + baseAcp;
+      document.getElementById('price').value = total ? format(total) : '';
+      updatePaymentPreview();
+    }
+    function setDdazua(v){ baseDdazua = v; updateCombinedPrice(); }
+    function setAcp(v){ baseAcp = v; updateCombinedPrice(); }
+    function syncBaseAmountsFromPrice(){
+      const total = num(document.getElementById('price').value);
+      if(baseDdazua + baseAcp !== total){ baseDdazua = total; baseAcp = 0; }
+    }
 
-    function setDiscountType(type){
+        function setDiscountType(type){
       discountType = discountType === type ? '' : type;
       document.getElementById('subjectBtn').classList.toggle('active', discountType === 'subject');
       document.getElementById('percentBtn').classList.toggle('active', discountType === 'percent');
@@ -378,19 +396,17 @@
 
     function updatePaymentPreview(){
       const price = num(document.getElementById('price').value);
-      const employeeDiscount = num(document.getElementById('employeeDiscount').value);
       const directDiscount = num(document.getElementById('directDiscount').value);
       const subjectSupport = discountType === 'subject' ? num(document.getElementById('freeSupportAmount').value) : 0;
       const rate = discountType === 'percent' ? Number(document.getElementById('discountRate').value || 0) : 0;
       const percentDiscountAmount = Math.round(price * rate / 100);
-      const finalPrice = Math.max(price - employeeDiscount - directDiscount - subjectSupport - percentDiscountAmount, 0);
-      document.getElementById('discountPercentText').textContent = `${rate || 0}%`;
+      const finalPrice = Math.max(price - directDiscount - subjectSupport - percentDiscountAmount, 0);
       document.getElementById('percentDiscountAmountText').textContent = `${format(percentDiscountAmount)}원`;
       document.getElementById('finalPrice').value = format(finalPrice);
       updateRemainPreview();
     }
 
-    function updateRemainPreview(){
+        function updateRemainPreview(){
       const finalPrice = num(document.getElementById('finalPrice').value);
       const paid = num(document.getElementById('paid').value);
       document.getElementById('remainPreview').value = format(Math.max(finalPrice - paid, 0));
@@ -423,7 +439,8 @@
       document.getElementById('student').value = '';
       document.getElementById('mentor').value = '';
       document.getElementById('price').value = '';
-      document.getElementById('employeeDiscount').value = '';
+      baseDdazua = 0;
+      baseAcp = 0;
       document.getElementById('directDiscount').value = '';
       document.getElementById('finalPrice').value = '0';
       document.getElementById('paid').value = '';
@@ -433,8 +450,7 @@
       document.getElementById('freeSupportCount').value = '';
       document.getElementById('freeSupportAmount').value = '';
       document.getElementById('discountRate').value = '';
-      document.getElementById('discountPercentText').textContent = '0%';
-      document.getElementById('percentDiscountAmountText').textContent = '0원';
+            document.getElementById('percentDiscountAmountText').textContent = '0원';
       selectedCourse = '';
       selectedPayor = '본인';
       discountType = '';
@@ -446,12 +462,12 @@
 
     function saveData(){
       const price = num(document.getElementById('price').value);
-      const employeeDiscount = num(document.getElementById('employeeDiscount').value);
       const directDiscount = num(document.getElementById('directDiscount').value);
       const rate = discountType === 'percent' ? Number(document.getElementById('discountRate').value || 0) : 0;
       const percentDiscountAmount = Math.round(price * rate / 100);
       const freeSupportAmount = discountType === 'subject' ? num(document.getElementById('freeSupportAmount').value) : 0;
-      const finalPrice = Math.max(price - employeeDiscount - directDiscount - freeSupportAmount - percentDiscountAmount, 0);
+      const finalPrice = Math.max(price - directDiscount - freeSupportAmount - percentDiscountAmount, 0);
+      const paidValue = num(document.getElementById('paid').value);
       const row = {
         date: document.getElementById('date').value,
         dueDate: document.getElementById('dueDate').value,
@@ -461,7 +477,8 @@
         course: selectedCourse,
         payor: selectedPayor,
         price,
-        employeeDiscount,
+        baseDdazua,
+        baseAcp,
         directDiscount,
         discountType,
         discountRate: rate,
@@ -470,23 +487,26 @@
         freeSupportCount: discountType === 'subject' ? Number(document.getElementById('freeSupportCount').value || 0) : 0,
         freeSupportAmount,
         finalPrice,
-        paid: num(document.getElementById('paid').value),
+        paid: paidValue,
         memo: document.getElementById('memo').value.trim()
       };
+      if(Math.max(finalPrice - paidValue, 0) === 0 && finalPrice > 0) row.result = '등록';
+      else if(row.result==='등록' && row.dueDate && Math.max(finalPrice - paidValue,0) > 0 && String(row.dueDate).replace(/-/g,'') < today().replace(/-/g,'')) row.result='미완료';
       if(editIndex === null) rows.push(row); else rows[editIndex] = row;
       closeModal();
       renderAll();
     }
 
-    function loadRow(index){
+        function loadRow(index){
       const r = rows[index]; if(!r) return;
       document.getElementById('date').value = r.date || today();
       document.getElementById('dueDate').value = r.dueDate || today();
       document.getElementById('result').value = r.result || '등록';
       document.getElementById('student').value = r.student || '';
       document.getElementById('mentor').value = r.mentor || '';
+      baseDdazua = Number(r.baseDdazua || 0);
+      baseAcp = Number(r.baseAcp || 0);
       document.getElementById('price').value = r.price ? format(r.price) : '';
-      document.getElementById('employeeDiscount').value = r.employeeDiscount ? format(r.employeeDiscount) : '';
       document.getElementById('directDiscount').value = r.directDiscount ? format(r.directDiscount) : '';
       document.getElementById('paid').value = r.paid ? format(r.paid) : '';
       document.getElementById('memo').value = r.memo || '';
@@ -520,7 +540,8 @@
         body.innerHTML = `
           <div class="detail-card space-y-2 text-sm">
             <div class="flex justify-between"><span>총금액</span><b class="mono">${format(r.price)}원</b></div>
-            <div class="flex justify-between"><span>직원할인</span><b class="mono">${format(r.employeeDiscount)}원</b></div>
+            <div class="flex justify-between"><span>따즈아</span><b class="mono">${format(r.baseDdazua || 0)}원</b></div>
+            <div class="flex justify-between"><span>ACP</span><b class="mono">${format(r.baseAcp || 0)}원</b></div>
             <div class="flex justify-between"><span>직권할인</span><b class="mono">${format(r.directDiscount)}원</b></div>
             <div class="flex justify-between"><span>실결제</span><b class="mono">${format(r.finalPrice)}원</b></div>
             <div class="flex justify-between"><span>매출</span><b class="mono text-sky-600">${format(r.paid)}원</b></div>
@@ -560,6 +581,19 @@
       document.getElementById('drawerBackdrop').classList.remove('show');
     }
 
+    function quickEditMoney(index, field){
+      const r = rows[index]; if(!r) return;
+      const current = field==='paid' ? Number(r.paid||0) : remainOf(r);
+      const value = prompt(`${field==='paid' ? '매출' : '잔액'} 금액 입력`, String(current));
+      if(value === null) return;
+      const n = Number(String(value).replace(/[^0-9]/g,'')) || 0;
+      if(field==='paid') r.paid = n;
+      else r.paid = Math.max(Number(r.finalPrice || 0) - n, 0);
+      if(remainOf(r)===0 && Number(r.finalPrice||0)>0) r.result = '등록';
+      else if(r.dueDate && remainOf(r)>0 && String(r.dueDate).replace(/-/g,'') < today().replace(/-/g,'')) r.result = '미완료';
+      renderAll();
+    }
+
     function setSort(type){
       currentSort = type;
       document.getElementById('sortDesc').classList.toggle('active', type === 'desc');
@@ -574,7 +608,7 @@
     function setMonth(v){ currentMonth = v; renderAll(); }
 
     function renderResultFilters(){
-      const items = ['전체','등록','COD','미등록','추등'];
+      const items = ['전체','등록','COD','미등록','추등','미완료'];
       document.getElementById('resultFilters').innerHTML = items.map(item => `<button class="chip ${currentResult===item?'active':''}" onclick="setResult('${item}')">${item}</button>`).join('');
     }
     function setResult(v){ currentResult = v; renderAll(); }
@@ -583,17 +617,18 @@
       const q = document.getElementById('search').value.trim();
       return rows.filter(r => {
         const monthOk = currentMonth === '전체' || monthLabel(r.date) === currentMonth;
-        const resultOk = currentResult === '전체' || r.result === currentResult;
+        const resultOk = currentResult === '전체' || effectiveResult(r) === currentResult;
         const searchOk = !q || [r.student, r.mentor, r.course, r.memo].some(v => String(v || '').includes(q));
         return monthOk && resultOk && searchOk;
       }).sort((a,b) => currentSort === 'desc' ? dateValue(b.date).localeCompare(dateValue(a.date)) : dateValue(a.date).localeCompare(dateValue(b.date)));
     }
 
     function renderStats(filtered){
-      const reg = filtered.filter(r => r.result === '등록').length;
-      const cod = filtered.filter(r => r.result === 'COD').length;
-      const fail = filtered.filter(r => r.result === '미등록').length;
-      const up = filtered.filter(r => r.result === '추등').length;
+      const reg = filtered.filter(r => effectiveResult(r) === '등록').length;
+      const cod = filtered.filter(r => effectiveResult(r) === 'COD').length;
+      const fail = filtered.filter(r => effectiveResult(r) === '미등록').length;
+      const up = filtered.filter(r => effectiveResult(r) === '추등').length;
+      const incomplete = filtered.filter(r => effectiveResult(r) === '미완료').length;
       const total = filtered.reduce((s,r) => s + Number(r.finalPrice || 0), 0);
       const paid = filtered.reduce((s,r) => s + Number(r.paid || 0), 0);
       const remain = filtered.reduce((s,r) => s + remainOf(r), 0);
@@ -607,25 +642,30 @@
       document.getElementById('codCount').textContent = format(cod);
       document.getElementById('failCount').textContent = format(fail);
       document.getElementById('promoteCount').textContent = format(up);
+      document.getElementById('incompleteCount').textContent = format(incomplete);
       document.getElementById('summaryMonth').textContent = currentMonth;
       document.getElementById('summaryReg').textContent = `${format(reg)}건`;
       document.getElementById('summaryCod').textContent = `${format(cod)}건`;
       document.getElementById('summaryFail').textContent = `${format(fail)}건`;
       document.getElementById('summaryPromote').textContent = `${format(up)}건`;
+      document.getElementById('summaryIncomplete').textContent = `${format(incomplete)}건`;
     }
 
-    function renderMentorPanel(filtered){
+        function renderMentorPanel(filtered){
       const map = {};
       filtered.forEach(r => {
         const key = r.mentor || '미지정';
-        if(!map[key]) map[key] = {mentor:key, total:0, reg:0, cod:0, fail:0, up:0, sales:0, remain:0};
-        map[key].total += 1;
-        map[key].sales += Number(r.finalPrice || 0);
-        map[key].remain += remainOf(r);
-        if(r.result === '등록') map[key].reg += 1;
-        if(r.result === 'COD') map[key].cod += 1;
-        if(r.result === '미등록') map[key].fail += 1;
-        if(r.result === '추등') map[key].up += 1;
+        if(!map[key]) map[key] = {mentor:key, total:0, reg:0, cod:0, fail:0, up:0, incomplete:0, sales:0, remain:0};
+        const m = map[key];
+        m.total += 1;
+        m.sales += Number(r.finalPrice || 0);
+        m.remain += remainOf(r);
+        const er = effectiveResult(r);
+        if(er === '등록') m.reg += 1;
+        if(er === 'COD') m.cod += 1;
+        if(er === '미등록') m.fail += 1;
+        if(er === '추등') m.up += 1;
+        if(er === '미완료') m.incomplete += 1;
       });
       const items = Object.values(map).sort((a,b) => b.sales - a.sales || b.reg - a.reg);
       const el = document.getElementById('mentorPanel');
@@ -633,17 +673,24 @@
         (items.length ? items.map((m,idx) => `
           <div class="detail-card mb-2">
             <div class="flex items-center justify-between gap-3">
-              <div>
+              <div class="flex-1">
                 <div class="flex items-center gap-2"><span class="chip !h-[28px]">#${idx+1}</span><b>${escapeHtml(m.mentor)}</b></div>
                 <div class="text-xs text-slate-400 mt-1">총 상담 ${format(m.total)}건 · 실결제 ${format(m.sales)}</div>
+                <div class="mt-2 grid grid-cols-5 gap-2 text-[11px]">
+                  <div class="detail-card !p-2 text-center">완납<br><b>${m.total?Math.round(m.reg/m.total*100):0}%</b></div>
+                  <div class="detail-card !p-2 text-center">COD<br><b>${m.total?Math.round(m.cod/m.total*100):0}%</b></div>
+                  <div class="detail-card !p-2 text-center">미등<br><b>${m.total?Math.round(m.fail/m.total*100):0}%</b></div>
+                  <div class="detail-card !p-2 text-center">추등<br><b>${m.total?Math.round(m.up/m.total*100):0}%</b></div>
+                  <div class="detail-card !p-2 text-center">미완료<br><b>${m.total?Math.round(m.incomplete/m.total*100):0}%</b></div>
+                </div>
               </div>
               <div class="text-xs text-rose-600 font-bold">잔액 ${format(m.remain)}</div>
             </div>
           </div>`).join('') : `<div class="detail-card text-slate-400 text-sm">표시할 데이터가 없습니다.</div>`);
     }
 
-    function renderUrgentPanel(filtered){
-      const urgent = filtered.map(r => ({...r, remain: remainOf(r)})).filter(r => r.remain > 0 || r.result !== '등록').sort((a,b) => b.remain - a.remain).slice(0,6);
+        function renderUrgentPanel(filtered){
+      const urgent = filtered.map(r => ({...r, remain: remainOf(r), displayResult: effectiveResult(r)})).filter(r => r.remain > 0 || r.displayResult !== '등록').sort((a,b) => b.remain - a.remain).slice(0,6);
       const el = document.getElementById('urgentPanel');
       el.innerHTML = `<div class="flex items-center justify-between mb-3"><h3 class="text-lg font-black">우선 확인 건</h3><span class="text-xs text-slate-400">버튼으로만 열림</span></div>` +
         (urgent.length ? urgent.map(r => `
@@ -653,7 +700,7 @@
                 <div class="font-bold">${escapeHtml(r.student || '-')}</div>
                 <div class="text-xs text-slate-400 mt-1">${escapeHtml(r.mentor || '멘토 미지정')} · ${escapeHtml(r.course || '과정 미지정')}</div>
               </div>
-              ${resultBadge(r.result)}
+              ${resultBadge(r.displayResult || effectiveResult(r))}
             </div>
             <div class="mt-2 text-xs text-rose-600 font-bold">남은 금액 ${format(r.remain)}원</div>
           </div>`).join('') : `<div class="detail-card text-slate-400 text-sm">확인할 항목이 없습니다.</div>`);
@@ -687,13 +734,15 @@
           lastMonth = month;
         }
         const remain = remainOf(r);
+        const displayResult = effectiveResult(r);
+        const rowClass = resultClass[displayResult] || 'fail';
         const discountSummary = r.discountType === 'subject'
-          ? `과목지원 · 유료 ${r.freePaidCount || 0} / 무료 ${r.freeSupportCount || 0}`
+          ? `과목지원 · 유료 ${r.freePaidCount || 0} 무료 ${r.freeSupportCount || 0} 지원 ${format(r.freeSupportAmount || 0)}원`
           : r.discountType === 'percent'
-            ? `% 할인 ${r.discountRate || 0}%`
+            ? `${r.discountRate || 0}% 할인 · ${format(r.percentDiscountAmount || 0)}원`
             : '할인 없음';
         html += `
-          <tr>
+          <tr class="row-${rowClass}">
             <td class="mono">${toDisplayDate(r.date)}</td>
             <td class="mono">${toDisplayDate(r.dueDate)}</td>
             <td>
@@ -701,27 +750,19 @@
               <div class="text-xs text-slate-400 line-clamp-1 max-w-[160px]">멘토 ${escapeHtml(r.mentor || '-')}</div>
             </td>
             <td><span class="chip !h-[30px]">${escapeHtml(r.course || '-')}</span></td>
-            <td>${resultBadge(r.result)}</td>
-            <td class="mono text-sky-600 font-bold">${format(r.paid)}</td>
-            <td class="mono ${remain ? 'text-rose-600 font-bold':''}">${format(remain)}</td>
+            <td>${resultBadge(displayResult)}</td>
+            <td><button class="mono text-sky-600 font-bold" onclick="quickEditMoney(${index}, 'paid')">${format(r.paid)}</button></td>
+            <td><button class="mono ${remain ? 'text-rose-600 font-bold':''}" onclick="quickEditMoney(${index}, 'remain')">${format(remain)}</button></td>
             <td><button class="icon-btn compact-icon" title="금액정보" onclick="openDrawer('money', ${index})">₩</button></td>
-            <td>
-              <button class="icon-btn compact-icon" title="할인구성" onclick="openDrawer('discount', ${index})">%</button>
-              <span class="text-xs text-slate-400 ml-2">${escapeHtml(discountSummary)}</span>
-            </td>
+            <td><button class="icon-btn compact-icon" title="할인구성" onclick="openDrawer('discount', ${index})">%</button><span class="text-xs text-slate-400 ml-2 whitespace-nowrap">${escapeHtml(discountSummary)}</span></td>
             <td><button class="icon-btn compact-icon" title="특이사항" onclick="openDrawer('memo', ${index})">≡</button></td>
-            <td>
-              <div class="flex justify-end gap-2">
-                <button class="chip !h-[30px]" onclick="openModal(${index})">수정</button>
-                <button class="chip !h-[30px] text-rose-600" onclick="deleteRow(${index})">삭제</button>
-              </div>
-            </td>
+            <td><div class="flex justify-end gap-2"><button class="chip !h-[30px]" onclick="openModal(${index})">수정</button><button class="chip !h-[30px] text-rose-600" onclick="deleteRow(${index})">삭제</button></div></td>
           </tr>`;
       });
       body.innerHTML = html;
     }
 
-    function renderAll(){
+        function renderAll(){
       const filtered = getFilteredRows();
       renderMonthTabs();
       renderResultFilters();
