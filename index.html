@@ -374,8 +374,9 @@
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbwdEWt6oUIoWJ7KVYz4_5GjS4Y9igKLmEbnshVafIKlQTE_ltRZb2-hjqVTw0glOODteQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxlyB_p6MO509WuicgQyORowMGKVBqaYDYmY3aAq7PUG0FsGkCyuSpFXeHW0E8YfFP5/exec";
 const STORAGE_KEY = 'consult-dashboard-rows-v2';
+const USE_REMOTE = true;
 const COURSE_KEY  = 'consult-course-options-v1';
 
 let rows = [];
@@ -414,6 +415,67 @@ const escapeHtml = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<'
 /* ═══ 저장/로드 ═══ */
 function saveLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(rows)); }
 function loadLocal(){ try{ rows = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }catch(e){ rows = []; } }
+
+function normalizeRemoteRow(r={}){
+  const obj = {
+    id: r.id || r.ID || '',
+    date: r.date || r.일 || '',
+    deadline: r.deadline || r.납부기한 || '',
+    student: r.student || r.학생명 || '',
+    mentor: r.mentor || r.멘토 || '',
+    course: r.course || r.과정 || '',
+    price: Number(r.price ?? r.총금액 ?? 0),
+    ddazuaPrice: Number(r.ddazuaPrice ?? r.따즈아금액 ?? 0),
+    acpPrice: Number(r.acpPrice ?? r.ACP금액 ?? 0),
+    specialDiscount: Number(r.specialDiscount ?? r.직권할인 ?? 0),
+    discountType: r.discountType || r.할인방식 || '',
+    discountRate: Number(r.discountRate ?? r.할인율 ?? 0),
+    supportPaidCount: Number(r.supportPaidCount ?? 0),
+    supportFreeCount: Number(r.supportFreeCount ?? 0),
+    finalPrice: Number(r.finalPrice ?? r.실결제 ?? 0),
+    paid: Number(r.paid ?? r.매출 ?? 0),
+    payer: r.payer || r.결제권자 || '',
+    purpose: r.purpose || r.목적 || '',
+    result: r.result || r.결과수동 || '',
+    memo: r.memo || r.특이사항 || ''
+  };
+  if(!obj.supportPaidCount && !obj.supportFreeCount && typeof (r.과목지원금액 || '') === 'string'){
+    const m = String(r.과목지원금액).match(/유료\s*(\d+)\s*\/\s*무료\s*(\d+)/);
+    if(m){ obj.supportPaidCount = Number(m[1]||0); obj.supportFreeCount = Number(m[2]||0); }
+  }
+  obj.displayResult = r.displayResult || r.결과 || getAutoResult(obj);
+  return obj;
+}
+
+async function apiRequest(action, payload={}){
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action, ...payload })
+  });
+  const text = await res.text();
+  try { return JSON.parse(text || '{}'); }
+  catch(err){ throw new Error('서버 응답을 읽지 못했습니다. Apps Script 응답 형식을 확인해주세요.'); }
+}
+
+async function loadRemoteData(){
+  try{
+    const url = API_URL + '?action=list&_=' + Date.now();
+    const res = await fetch(url);
+    const text = await res.text();
+    const json = JSON.parse(text || '{}');
+    if(!json.ok) throw new Error(json.error || '목록 조회 실패');
+    rows = Array.isArray(json.rows) ? json.rows.map(normalizeRemoteRow) : [];
+    saveLocal();
+    renderAll();
+  }catch(err){
+    console.error('원격 목록 불러오기 실패', err);
+    loadLocal();
+    renderAll();
+    alert('공용 목록을 불러오지 못해 현재 브라우저 저장 데이터로 표시합니다. Apps Script 배포 URL/권한을 확인해주세요.');
+  }
+}
+
 function saveCourses(){ localStorage.setItem(COURSE_KEY, JSON.stringify(courseOptions)); }
 function loadCourses(){
   try{ const s = JSON.parse(localStorage.getItem(COURSE_KEY)); if(Array.isArray(s) && s.length) courseOptions = s; }catch(e){}
@@ -907,37 +969,30 @@ function buildRowFromForm(){
   return obj;
 }
 
-async function postToSheet(obj){
-  const payload = {
-    일: displayDate(obj.date),
-    납부기한: displayDate(obj.deadline),
-    학생명: obj.student,
-    멘토: obj.mentor,
-    과정: obj.course,
-    총금액: obj.price,
-    따즈아금액: obj.ddazuaPrice,
-    ACP금액: obj.acpPrice,
-    직권할인: obj.specialDiscount,
-    할인방식: obj.discountType,
-    할인율: obj.discountRate,
-    과목지원금액: obj.discountType === '과목지원' ? `유료 ${obj.supportPaidCount} / 무료 ${obj.supportFreeCount}` : '',
-    실결제: obj.finalPrice,
-    매출: obj.paid,
-    잔액: Math.max(Number(obj.finalPrice||0)-Number(obj.paid||0),0),
-    결제권자: obj.payer,
-    결과: obj.displayResult,
-    특이사항: obj.memo ? `[목적:${obj.purpose}] ${obj.memo}` : `[목적:${obj.purpose}]`
-  };
-  try{
-    await fetch(API_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(payload) });
-  }catch(err){ console.error('시트 전송 실패', err); }
+async function saveRemoteRow(obj, mode='create'){
+  const payload = { row: obj };
+  if(mode === 'update') payload.id = obj.id;
+  const json = await apiRequest(mode, payload);
+  if(!json.ok) throw new Error(json.error || '저장 실패');
+  return json;
 }
 
 async function saveData(){
   const obj = buildRowFromForm();
-  if(editIndex !== null) rows[editIndex] = obj; else rows.push(obj);
-  saveLocal(); renderAll(); closeModal();
-  await postToSheet(obj);
+  try{
+    if(editIndex !== null){
+      obj.id = rows[editIndex]?.id || '';
+      await saveRemoteRow(obj, 'update');
+    }else{
+      const saved = await saveRemoteRow(obj, 'create');
+      if(saved.id) obj.id = saved.id;
+    }
+    closeModal();
+    await loadRemoteData();
+  }catch(err){
+    console.error(err);
+    alert(err.message || '저장 중 오류가 발생했습니다.');
+  }
 }
 
 function editRow(index){
@@ -976,23 +1031,39 @@ function editRow(index){
   setSelectedChoice('purposeWrap', r.purpose || '취업');
   updatePaymentPreview();
 }
-function deleteRow(index){
-  if(!confirm('이 상담 기록을 삭제할까요?')) return;
-  rows.splice(index,1); saveLocal(); renderAll();
-}
-function quickEditAmount(index, type){
+async function deleteRow(index){
   const r = rows[index]; if(!r) return;
+  if(!confirm('이 상담 기록을 삭제할까요?')) return;
+  try{
+    const json = await apiRequest('delete', { id: r.id });
+    if(!json.ok) throw new Error(json.error || '삭제 실패');
+    await loadRemoteData();
+  }catch(err){
+    console.error(err);
+    alert(err.message || '삭제 중 오류가 발생했습니다.');
+  }
+}
+async function quickEditAmount(index, type){
+  const r = rows[index]; if(!r) return;
+  const nextRow = {...r};
   if(type === 'paid'){
     const next = prompt('매출(납부) 금액을 입력하세요.', String(r.paid || 0).replace(/,/g,''));
     if(next===null) return;
-    r.paid = Number(onlyNumber(next)||0);
+    nextRow.paid = Number(onlyNumber(next)||0);
   }else{
     const nextRemain = prompt('잔액 금액을 입력하세요.', String(Math.max(Number(r.finalPrice||0)-Number(r.paid||0),0)));
     if(nextRemain===null) return;
     const remain = Number(onlyNumber(nextRemain)||0);
-    r.paid = Math.max(Number(r.finalPrice||0)-remain,0);
+    nextRow.paid = Math.max(Number(r.finalPrice||0)-remain,0);
   }
-  r.displayResult = getAutoResult(r); saveLocal(); renderAll();
+  nextRow.displayResult = getAutoResult(nextRow);
+  try{
+    await saveRemoteRow(nextRow, 'update');
+    await loadRemoteData();
+  }catch(err){
+    console.error(err);
+    alert(err.message || '금액 수정 중 오류가 발생했습니다.');
+  }
 }
 
 /* ═══ 키보드 ═══ */
@@ -1005,11 +1076,10 @@ document.addEventListener('keydown', (e)=>{
 
 /* ═══ 초기화 ═══ */
 loadCourses();
-loadLocal();
 renderChoiceButtons();
 renderCourseButtons();
 renderDiscountPane();
-renderAll();
+loadRemoteData();
 </script>
 </body>
 </html>
