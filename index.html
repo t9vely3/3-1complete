@@ -618,11 +618,10 @@
           <div id="discountPane" class="discount-pane"></div>
         </div>
 
-        <!-- B. 수강료 (총금액) -->
-        <div class="form-card">
-          <h3 class="form-title">수강료 <span class="form-sub">총금액 · 할인 적용 전</span></h3>
-          <div class="field"><label>총금액</label><input id="price" class="input" inputmode="numeric" oninput="formatCurrencyInput(this); updatePaymentPreview();" /></div>
-          <div class="field" style="margin-top:10px"><label>빠른 입력</label><div class="chipset" id="quickPriceWrap"></div></div>
+        <!-- B. 수강료 (할인방식 선택 시에만 표시) -->
+        <div class="form-card" id="tuitionCard" style="display:none">
+          <h3 class="form-title" id="tuitionTitle">수강료</h3>
+          <div id="tuitionPane"></div>
         </div>
 
         <!-- C. 수강료 외 (매출외수당) -->
@@ -701,7 +700,7 @@ let courseOptions = ['편집','모션','실내','웹툰','드로잉','마야','�
 const payerOptions = ['본인','부모님','친구','지인'];
 const purposeOptions = ['취업','취미','창업','보충'];
 const quickAmounts = [320000,390000,500000,990000];
-const ddazuaQuickAmounts = [50000,100000,150000,200000,300000];
+const ddazuaQuickAmounts = [320000,390000,500000,990000];
 const acpMap = {1:70000,2:130000,3:190000,4:250000,5:310000};
 
 function onlyNumber(v){ return String(v || '').replace(/[^0-9]/g,''); }
@@ -1179,26 +1178,45 @@ function resetPayableAuto(){
 }
 
 function updatePaymentPreview(opts={}){
-  const price = num(document.getElementById('price').value);
+  // #price가 존재할 때만 참조 (할인방식 없으면 수강료 카드가 숨겨져 있음)
+  const priceEl = document.getElementById('price');
+  const price = priceEl ? num(priceEl.value) : 0;
   const rate = Number(document.getElementById('discountRate')?.value || 0);
-  const autoPayable = computeAutoPayable(price, currentDiscountType, rate);
-  const payableField = document.getElementById('payableAmount');
 
-  // 수동 모드가 아니면 자동 계산된 납부금액을 필드에 채움
-  if(!payableManual && !opts.skipPayableRewrite){
-    payableField.value = autoPayable ? format(autoPayable) : '';
+  // 할인방식별로 납부금액 계산
+  let payable;
+  if(currentDiscountType === '과목지원'){
+    // #price = 사용자가 입력한 납부금액
+    payable = price;
+  } else if(currentDiscountType === '%할인'){
+    const autoPayable = computeAutoPayable(price, '%할인', rate);
+    // 할인금액 자동 채우기
+    const discAmt = computePercentDiscount(price, rate);
+    const discField = document.getElementById('percentDiscountAmount');
+    if(discField) discField.value = discAmt ? format(discAmt) : '';
+    // 납부금액 필드 (수동 아니면 자동 채움)
+    const payField = document.getElementById('payableAmount');
+    if(payField && !payableManual && !opts.skipPayableRewrite){
+      payField.value = autoPayable ? format(autoPayable) : '';
+    }
+    payable = payableManual && payField ? num(payField.value) : autoPayable;
+  } else {
+    // 할인 없음 - 수강료 카드 자체가 없음. 납부금액 = 0
+    payable = 0;
   }
 
-  const finalPrice = computeFinalPrice();
-  document.getElementById('finalPrice').value = finalPrice ? format(finalPrice) : '';
+  // 실결제 = 납부금액 - 직권할인
+  const special = num(document.getElementById('specialDiscount')?.value || 0);
+  const finalPrice = Math.max(payable - special, 0);
+  const finalEl = document.getElementById('finalPrice');
+  if(finalEl) finalEl.value = finalPrice ? format(finalPrice) : '';
 
-  // 매출외수당 합계
-  const ddz = num(document.getElementById('ddazuaPrice').value);
-  const acp = num(document.getElementById('acpPrice').value);
+  // 매출외수당
+  const ddz = num(document.getElementById('ddazuaPrice')?.value || 0);
+  const acp = num(document.getElementById('acpPrice')?.value || 0);
   const bt = document.getElementById('bonusTotal');
   if(bt) bt.textContent = format(ddz + acp);
 
-  renderDiscountPane();
   updateRemain();
 }
 
@@ -1506,9 +1524,7 @@ function addCourse(){ const v = courseAddInput.value.trim(); if(!v) return; if(!
 function renderChoiceButtons(){
   payerWrap.innerHTML = payerOptions.map(v => `<button type="button" class="mini-btn" data-choice="payer">${v}</button>`).join('');
   purposeWrap.innerHTML = purposeOptions.map(v => `<button type="button" class="mini-btn" data-choice="purpose">${v}</button>`).join('');
-  // 총금액 빠른입력
-  quickPriceWrap.innerHTML = quickAmounts.map(v => `<button type="button" class="mini-btn" onclick="setPrice(${v})">${format(v)}</button>`).join('');
-  // 따즈아 빠른입력 (신규)
+  // 따즈아 빠른입력
   const ddzWrap = document.getElementById('ddazuaQuickWrap');
   if(ddzWrap){
     ddzWrap.innerHTML = ddazuaQuickAmounts.map(v => `<button type="button" class="mini-btn" onclick="setDdazua(${v})">${format(v)}</button>`).join('');
@@ -1520,11 +1536,6 @@ function renderChoiceButtons(){
 function selectSingleChoice(btn, wrapId){ document.querySelectorAll(`#${wrapId} .mini-btn`).forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
 function getSelectedChoice(wrapId){ const btn = document.querySelector(`#${wrapId} .mini-btn.active`); return btn ? btn.textContent.trim() : ''; }
 function setSelectedChoice(wrapId, value){ document.querySelectorAll(`#${wrapId} .mini-btn`).forEach(btn=> btn.classList.toggle('active', btn.textContent.trim()===value)); }
-function setPrice(v){
-  price.value = format(v);
-  document.querySelectorAll('#quickPriceWrap .mini-btn').forEach(btn => btn.classList.toggle('active', num(btn.textContent)===v));
-  updatePaymentPreview();
-}
 function setDdazua(v){
   document.getElementById('ddazuaPrice').value = format(v);
   document.querySelectorAll('#ddazuaQuickWrap .mini-btn').forEach(btn => btn.classList.toggle('active', num(btn.textContent)===v));
@@ -1539,8 +1550,56 @@ function setDiscountType(type){
   document.getElementById('noDiscountBtn').classList.toggle('active', currentDiscountType==='');
   // 할인방식 바꾸면 납부금액 자동 모드로 복귀
   resetPayableAuto();
+  renderTuitionPane();
   renderDiscountPane();
   updatePaymentPreview();
+}
+
+function renderTuitionPane(){
+  const card = document.getElementById('tuitionCard');
+  const pane = document.getElementById('tuitionPane');
+  const title = document.getElementById('tuitionTitle');
+  if(!pane || !card) return;
+
+  // "할인 없음" (초기 상태): 수강료 카드 자체 숨김
+  if(!currentDiscountType){
+    card.style.display = 'none';
+    pane.innerHTML = '';
+    return;
+  }
+  card.style.display = '';
+
+  // 현재 입력값 보존 (할인방식 전환 시 값 유지)
+  const curPrice = document.getElementById('price')?.value || '';
+  const curPayable = document.getElementById('payableAmount')?.value || '';
+
+  if(currentDiscountType === '과목지원'){
+    title.innerHTML = `수강료 <span class="form-sub">과목지원 · 납부금액 직접 입력</span>`;
+    pane.innerHTML = `
+      <div class="field">
+        <label>납부금액</label>
+        <input id="price" class="input" inputmode="numeric" value="${curPrice}" oninput="formatCurrencyInput(this); updatePaymentPreview();" />
+        <div class="field-hint">과목지원은 이미 할인된 금액이라, 입력한 금액이 그대로 납부금액이에요</div>
+      </div>`;
+  } else if(currentDiscountType === '%할인'){
+    title.innerHTML = `수강료 <span class="form-sub">총금액 · 할인금액 · 납부금액 (자동 계산)</span>`;
+    pane.innerHTML = `
+      <div class="grid-3">
+        <div class="field">
+          <label>총금액</label>
+          <input id="price" class="input" inputmode="numeric" value="${curPrice}" oninput="formatCurrencyInput(this); updatePaymentPreview();" />
+        </div>
+        <div class="field">
+          <label>할인금액 <span class="field-aux">자동</span></label>
+          <input id="percentDiscountAmount" class="input" style="background:var(--surface-2)" readonly />
+        </div>
+        <div class="field">
+          <label>납부금액 <span class="field-aux" id="payableAuto">자동</span></label>
+          <input id="payableAmount" class="input" inputmode="numeric" value="${curPayable}" oninput="formatCurrencyInput(this); onPayableManualEdit();" />
+        </div>
+      </div>
+      <div class="field-hint" style="margin-top:6px">납부금액 = 총금액 − 할인금액</div>`;
+  }
 }
 
 function renderDiscountPane(){
@@ -1552,48 +1611,89 @@ function renderDiscountPane(){
         <div class="field"><label>유료과목 수</label><input id="supportPaidCount" class="input" type="number" min="0" value="${document.getElementById('supportPaidCount')?.value || 0}" oninput="updatePaymentPreview()" /></div>
         <div class="field"><label>무료과목 수</label><input id="supportFreeCount" class="input" type="number" min="0" value="${document.getElementById('supportFreeCount')?.value || 0}" oninput="updatePaymentPreview()" /></div>
       </div>
-      <div class="field-hint" style="margin-top:8px">과목지원은 과목 수로만 기록됩니다. 납부금액은 <b>총금액 그대로</b>예요.</div>`;
+      <div class="field-hint" style="margin-top:8px">과목 수만 기록되며, 납부금액은 아래 수강료 칸에서 직접 입력하세요</div>`;
   } else if(currentDiscountType === '%할인'){
     const rate = Number(document.getElementById('discountRate')?.value || 0);
-    const price = num(document.getElementById('price')?.value || 0);
-    const discAmt = computePercentDiscount(price, rate);
     pane.innerHTML = `
-      <div class="grid-2">
-        <div class="field"><label>할인율 (%)</label><input id="discountRate" class="input" type="number" min="0" max="100" step="0.1" value="${rate || ''}" oninput="resetPayableAuto(); updatePaymentPreview()" /></div>
-        <div class="field"><label>할인금액 (자동)</label><input class="input" style="background:var(--surface-2)" readonly value="${discAmt ? format(discAmt) : ''}" /></div>
-      </div>
-      <div class="field-hint" style="margin-top:8px">납부금액 = 총금액 − ${format(discAmt||0)}</div>`;
+      <div class="field" style="max-width:220px">
+        <label>할인율 (%)</label>
+        <input id="discountRate" class="input" type="number" min="0" max="99" step="1" maxlength="2"
+          value="${rate || ''}"
+          oninput="onDiscountRateInput(this)"
+          onkeydown="onDiscountRateKeydown(event)"
+          placeholder="예: 20" />
+        <div class="field-hint">2자리 입력 시 자동으로 다음 칸 · Enter로 넘기기</div>
+      </div>`;
   } else {
-    pane.innerHTML = `<div class="field-hint" style="padding:6px 2px">할인 없음. 납부금액은 총금액과 동일해요.</div>`;
+    pane.innerHTML = `<div class="field-hint" style="padding:6px 2px">할인 방식을 선택하면 수강료 입력 칸이 나타나요.</div>`;
+  }
+}
+
+// 할인율 2자리 자동 이동
+function onDiscountRateInput(el){
+  let v = el.value.replace(/[^0-9]/g,'').slice(0,2);
+  if(v !== el.value) el.value = v;
+  updatePaymentPreview();
+  if(v.length === 2){
+    const payableEl = document.getElementById('payableAmount');
+    if(payableEl) payableEl.focus();
+  }
+}
+function onDiscountRateKeydown(e){
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    e.stopPropagation();
+    const payableEl = document.getElementById('payableAmount');
+    if(payableEl) payableEl.focus();
   }
 }
 
 function resetForm(){
-  ['date','deadline','student','mentor','price','ddazuaPrice','acpPrice','specialDiscount','finalPrice','paid','remain','memo','payableAmount'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  ['date','deadline','student','mentor','ddazuaPrice','acpPrice','specialDiscount','finalPrice','paid','remain','memo'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  // 동적 필드 초기화 (수강료 카드 내부 요소들)
+  ['price','payableAmount','percentDiscountAmount','discountRate','supportPaidCount','supportFreeCount'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   date.value = todayStr(); deadline.value = todayStr(); result.value = 'auto'; selectedCourseValue='';
   currentDiscountType='';
   payableManual = false;
-  const aux = document.getElementById('payableAuto');
-  if(aux){ aux.textContent='자동'; aux.classList.remove('manual'); }
   setSelectedChoice('payerWrap','본인'); setSelectedChoice('purposeWrap','취업');
   document.querySelectorAll('#acpPresetWrap .mini-btn').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('#ddazuaQuickWrap .mini-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('#quickPriceWrap .mini-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('supportBtn').classList.remove('active');
   document.getElementById('percentBtn').classList.remove('active');
   document.getElementById('noDiscountBtn').classList.add('active');
-  renderCourseButtons(); renderDiscountPane(); updatePaymentPreview();
+  renderCourseButtons();
+  renderTuitionPane();     // 수강료 카드 숨김 처리
+  renderDiscountPane();
+  updatePaymentPreview();
 }
 function openModal(){ resetForm(); editIndex = null; modalTitle.innerText='상담 입력'; saveButton.innerText='저장하기'; modal.classList.add('flex'); }
 function closeModal(){ modal.classList.remove('flex'); }
 
 function buildRowFromForm(){
-  const priceVal = num(price.value);
+  const priceEl = document.getElementById('price');
+  const priceInput = priceEl ? num(priceEl.value) : 0;
   const rate = Number(document.getElementById('discountRate')?.value || 0);
-  const autoPayable = computeAutoPayable(priceVal, currentDiscountType, rate);
-  const payableAmount = payableManual ? num(document.getElementById('payableAmount').value) : autoPayable;
+
+  // 할인방식별로 총금액 / 납부금액 의미가 다름
+  let totalPrice, payableAmount;
+  if(currentDiscountType === '과목지원'){
+    // 과목지원: 입력한 #price는 이미 할인된 납부금액
+    payableAmount = priceInput;
+    totalPrice = priceInput;
+  } else if(currentDiscountType === '%할인'){
+    totalPrice = priceInput;
+    const autoPayable = computeAutoPayable(totalPrice, '%할인', rate);
+    const payField = document.getElementById('payableAmount');
+    payableAmount = (payableManual && payField) ? num(payField.value) : autoPayable;
+  } else {
+    // 할인 없음 — 수강료 카드가 없으므로 0
+    totalPrice = 0;
+    payableAmount = 0;
+  }
+
   const ddz = num(ddazuaPrice.value);
   const acp = num(acpPrice.value);
+  const special = num(specialDiscount.value);
 
   const obj = {
     date: date.value,
@@ -1601,18 +1701,18 @@ function buildRowFromForm(){
     student: student.value.trim(),
     mentor: mentor.value.trim(),
     course: selectedCourseValue,
-    price: priceVal,
+    price: totalPrice,
     ddazuaPrice: ddz,
     acpPrice: acp,
-    bonusTotal: ddz + acp,              // 매출외수당 = 따즈아 + ACP
-    payableAmount: payableAmount,       // 납부금액
-    payableManual: payableManual,       // 수동 여부 기록
-    specialDiscount: num(specialDiscount.value),
+    bonusTotal: ddz + acp,
+    payableAmount: payableAmount,
+    payableManual: payableManual,
+    specialDiscount: special,
     discountType: currentDiscountType,
     discountRate: rate,
     supportPaidCount: Number(document.getElementById('supportPaidCount')?.value || 0),
     supportFreeCount: Number(document.getElementById('supportFreeCount')?.value || 0),
-    finalPrice: Math.max(payableAmount - num(specialDiscount.value), 0),  // 실결제 = 납부 - 직권할인
+    finalPrice: Math.max(payableAmount - special, 0),
     paid: num(paid.value),
     payer: getSelectedChoice('payerWrap'),
     purpose: getSelectedChoice('purposeWrap'),
@@ -1822,30 +1922,61 @@ async function saveData(){
 function editRow(index){
   const r = rows[index]; if(!r) return;
   editIndex = index; modalTitle.innerText='상담 수정'; saveButton.innerText='수정 저장'; modal.classList.add('flex');
-  date.value = r.date || todayStr(); deadline.value = r.deadline || todayStr(); student.value = r.student || ''; mentor.value = r.mentor || ''; selectedCourseValue = r.course || '';
-  price.value = r.price ? format(r.price) : ''; ddazuaPrice.value = r.ddazuaPrice ? format(r.ddazuaPrice) : ''; acpPrice.value = r.acpPrice ? format(r.acpPrice) : ''; specialDiscount.value = r.specialDiscount ? format(r.specialDiscount) : '';
-  paid.value = r.paid ? format(r.paid) : ''; memo.value = r.memo || ''; result.value = r.result || 'auto';
+  date.value = r.date || todayStr();
+  deadline.value = r.deadline || todayStr();
+  student.value = r.student || '';
+  mentor.value = r.mentor || '';
+  selectedCourseValue = r.course || '';
+  ddazuaPrice.value = r.ddazuaPrice ? format(r.ddazuaPrice) : '';
+  acpPrice.value = r.acpPrice ? format(r.acpPrice) : '';
+  specialDiscount.value = r.specialDiscount ? format(r.specialDiscount) : '';
+  paid.value = r.paid ? format(r.paid) : '';
+  memo.value = r.memo || '';
+  result.value = r.result || 'auto';
   currentDiscountType = r.discountType || '';
+  payableManual = !!r.payableManual;
+
   // 할인방식 토글 버튼 상태 동기화
   document.getElementById('supportBtn').classList.toggle('active', currentDiscountType==='과목지원');
   document.getElementById('percentBtn').classList.toggle('active', currentDiscountType==='%할인');
   document.getElementById('noDiscountBtn').classList.toggle('active', currentDiscountType==='');
-  renderCourseButtons(); renderDiscountPane();
-  if(currentDiscountType === '%할인'){ const dr = document.getElementById('discountRate'); if(dr) dr.value = r.discountRate || ''; }
+
+  renderCourseButtons();
+  renderTuitionPane();     // 수강료 카드 재생성 (할인방식에 따라)
+  renderDiscountPane();
+
+  // 수강료 카드 내부 필드는 renderTuitionPane 이후에 채워야 함
+  const priceEl = document.getElementById('price');
+  if(priceEl){
+    if(currentDiscountType === '과목지원'){
+      // price = 납부금액
+      const payable = r.payableAmount != null ? r.payableAmount : r.price;
+      priceEl.value = payable ? format(payable) : '';
+    } else if(currentDiscountType === '%할인'){
+      priceEl.value = r.price ? format(r.price) : '';
+    }
+    // 할인 없음이면 priceEl이 존재하지 않으므로 패스
+  }
+
+  if(currentDiscountType === '%할인'){
+    const dr = document.getElementById('discountRate');
+    if(dr) dr.value = r.discountRate || '';
+    const payField = document.getElementById('payableAmount');
+    if(payField){
+      if(payableManual && r.payableAmount != null){
+        payField.value = format(r.payableAmount);
+        const aux = document.getElementById('payableAuto');
+        if(aux){ aux.textContent='수동'; aux.classList.add('manual'); }
+      }
+    }
+  }
   if(currentDiscountType === '과목지원'){
     const sp = document.getElementById('supportPaidCount'); if(sp) sp.value = r.supportPaidCount || 0;
     const sf = document.getElementById('supportFreeCount'); if(sf) sf.value = r.supportFreeCount || 0;
   }
-  // 납부금액 복원: 수동이었다면 저장된 값 그대로, 아니면 자동 계산
-  payableManual = !!r.payableManual;
-  const aux = document.getElementById('payableAuto');
-  if(payableManual && r.payableAmount != null){
-    document.getElementById('payableAmount').value = format(r.payableAmount);
-    if(aux){ aux.textContent='수동'; aux.classList.add('manual'); }
-  } else {
-    if(aux){ aux.textContent='자동'; aux.classList.remove('manual'); }
-  }
-  setSelectedChoice('payerWrap', r.payer || '본인'); setSelectedChoice('purposeWrap', r.purpose || '취업');
+
+  setSelectedChoice('payerWrap', r.payer || '본인');
+  setSelectedChoice('purposeWrap', r.purpose || '취업');
   updatePaymentPreview();
 }
 async function deleteRow(index){
