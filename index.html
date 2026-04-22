@@ -6,6 +6,46 @@
 <title>상담 매출 관리</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css" />
 <script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Firebase v10 (modular) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import {
+    getAuth, GoogleAuthProvider,
+    signInWithPopup, signInWithEmailAndPassword,
+    onAuthStateChanged, signOut
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+  import {
+    getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
+    onSnapshot, query, orderBy, serverTimestamp, writeBatch, getDocs
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCQofo_Tp-5W5CdNWGD0tu1yuU62rE4pWY",
+    authDomain: "complete-55019.firebaseapp.com",
+    projectId: "complete-55019",
+    storageBucket: "complete-55019.firebasestorage.app",
+    messagingSenderId: "157946979859",
+    appId: "1:157946979859:web:e0e6012454622defe441e6"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const provider = new GoogleAuthProvider();
+
+  window.__fb = {
+    app, auth, db, provider,
+    collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
+    onSnapshot, query, orderBy, serverTimestamp, writeBatch, getDocs,
+    signInWithPopup, signInWithEmailAndPassword, onAuthStateChanged, signOut
+  };
+
+  window.__fbReady = true;
+  if(typeof window.onFirebaseReady === 'function'){
+    window.onFirebaseReady();
+  }
+</script>
 <style>
   :root{
     --bg:#fafbfc;
@@ -93,7 +133,7 @@
   @media (max-width:700px){.kpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
   /* ===== Buttons & chips ===== */
-  .btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:8px;font-size:13px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--text);cursor:pointer;transition:.12s;font-family:inherit}
+  .btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:8px;font-size:13px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--text);cursor:pointer;transition:.12s;font-family:inherit;white-space:nowrap;flex-shrink:0}
   .btn:hover{border-color:#94a3b8}
   .btn-primary{background:var(--navy);color:#fff;border-color:var(--navy)}
   .btn-primary:hover{background:#000}
@@ -109,10 +149,10 @@
   /* ===== Inputs (modal) ===== */
   .input{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;outline:none;background:#fff;font-size:13px;font-family:inherit}
   .input:focus{border-color:#94a3b8;box-shadow:0 0 0 3px rgba(148,163,184,.15)}
-  .mini-btn{border:1px solid var(--line);background:#fff;color:var(--text-2);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;font-family:inherit}
+  .mini-btn{border:1px solid var(--line);background:#fff;color:var(--text-2);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;font-family:inherit;flex-shrink:0}
   .mini-btn:hover{border-color:#94a3b8}
   .mini-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
-  .toggle{border:1px solid var(--line);background:#fff;color:var(--text-2);border-radius:8px;padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+  .toggle{border:1px solid var(--line);background:#fff;color:var(--text-2);border-radius:8px;padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0}
   .toggle.active{background:var(--navy);color:#fff;border-color:var(--navy)}
 
   /* ===== Table ===== */
@@ -186,11 +226,169 @@
   #syncIndicator[data-state="error"]{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca}
   #syncIndicator[data-state="idle"]{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
 
-  .discount-pane{min-height:72px}
+  /* ===== Login / Auth ===== */
+  #authOverlay{position:fixed;inset:0;z-index:999;background:linear-gradient(135deg,#fafbfc 0%,#eef2f7 100%);display:flex;align-items:center;justify-content:center;padding:20px}
+  .auth-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:36px 32px;max-width:420px;width:100%;box-shadow:0 24px 60px -20px rgba(2,6,23,.12);text-align:center}
+  .auth-card .logo{width:56px;height:56px;background:var(--navy);border-radius:14px;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;margin-bottom:16px;letter-spacing:-0.03em}
+  .auth-card h1{font-size:22px;font-weight:800;letter-spacing:-0.02em;margin-bottom:6px}
+  .auth-card .sub{font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.5}
+  .auth-card .g-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;height:44px;border:1px solid var(--line);background:#fff;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;transition:.12s;color:var(--text);font-family:inherit}
+  .auth-card .g-btn:hover{border-color:#94a3b8;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+  .auth-card .g-btn svg{width:18px;height:18px;flex-shrink:0}
+  .auth-card .err{margin-top:14px;padding:10px 12px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-line);border-radius:8px;font-size:12px;font-weight:600;text-align:left;display:none}
+  .auth-card .err.show{display:block}
+  .auth-card .footer{margin-top:22px;font-size:11px;color:var(--muted)}
+  .auth-card .loading{display:none;margin-top:12px;font-size:12px;color:var(--muted)}
+  .auth-card .loading.show{display:block}
+
+  .auth-divider{display:flex;align-items:center;margin:18px 0 14px;color:var(--muted);font-size:11px;font-weight:700}
+  .auth-divider::before,.auth-divider::after{content:"";flex:1;height:1px;background:var(--line)}
+  .auth-divider span{padding:0 12px}
+
+  .auth-toggle{width:100%;background:transparent;border:none;font-size:13px;font-weight:700;color:var(--text-2);cursor:pointer;padding:8px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}
+  .auth-toggle:hover{color:var(--text)}
+  .auth-email-form{display:none;flex-direction:column;gap:8px;margin-top:8px}
+  .auth-email-form.show{display:flex}
+  .auth-input{width:100%;height:40px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font-size:14px;font-family:inherit;outline:none;background:#fff}
+  .auth-input:focus{border-color:#94a3b8;box-shadow:0 0 0 3px rgba(148,163,184,.15)}
+  .auth-submit{width:100%;height:40px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;margin-top:2px}
+  .auth-submit:hover{background:#000}
+  .auth-submit:disabled{opacity:.6;cursor:not-allowed}
+
+  /* 로그인한 사용자 아바타 (topbar) */
+  .user-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 4px;border:1px solid var(--line);border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;background:#fff}
+  .user-chip:hover{border-color:#94a3b8}
+  .user-chip img{width:22px;height:22px;border-radius:999px}
+  .user-chip .mail{color:var(--text-2);font-weight:600}
+
+  /* ===== Toast ===== */
+  .toast-stack{position:fixed;bottom:20px;right:20px;z-index:100;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+  .toast{pointer-events:auto;min-width:260px;max-width:420px;background:#0b1220;color:#fff;padding:12px 14px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 16px 40px -12px rgba(0,0,0,.35);display:flex;align-items:flex-start;gap:10px;animation:toastIn .2s ease-out}
+  .toast .t-icon{flex-shrink:0;font-weight:900;width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;margin-top:1px}
+  .toast.success{background:#064e3b}
+  .toast.success .t-icon{background:#10b981;color:#fff}
+  .toast.error{background:#7f1d1d}
+  .toast.error .t-icon{background:#ef4444;color:#fff}
+  .toast.info .t-icon{background:#3b82f6;color:#fff}
+  .toast .t-body{flex:1;line-height:1.4}
+  .toast .t-action{font-weight:800;color:#93c5fd;cursor:pointer;text-decoration:underline;font-size:12px;margin-top:4px;display:inline-block}
+  .toast.success .t-action{color:#6ee7b7}
+  .toast.error .t-action{color:#fca5a5}
+  .toast .t-close{margin-left:4px;color:rgba(255,255,255,.5);cursor:pointer;font-size:16px;line-height:1}
+  @keyframes toastIn{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+  /* ===== Skeleton ===== */
+  .skeleton{background:linear-gradient(90deg,#f1f5f9 0%,#e2e8f0 50%,#f1f5f9 100%);background-size:200% 100%;animation:skel 1.2s ease-in-out infinite;border-radius:4px;display:inline-block}
+  @keyframes skel{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+  /* ===== Empty state ===== */
+  .empty-state{padding:48px 24px;text-align:center;color:var(--muted)}
+  .empty-state .e-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px}
+  .empty-state .e-sub{font-size:13px;margin-bottom:16px}
+
+  /* ===== Checkbox ===== */
+  .ckbox{width:16px;height:16px;border:1.5px solid var(--line);border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;background:#fff;flex-shrink:0;transition:.12s}
+  .ckbox:hover{border-color:#94a3b8}
+  .ckbox.checked{background:var(--navy);border-color:var(--navy);color:#fff}
+  .ckbox.checked::after{content:"✓";font-size:10px;font-weight:900;line-height:1}
+  .data-table tbody tr.selected td{background:#eef4ff !important}
+
+  /* ===== Bulk bar ===== */
+  .bulk-bar{position:sticky;top:var(--topbar-h);z-index:30;background:var(--navy);color:#fff;padding:10px 16px;border-radius:10px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 8px 20px -8px rgba(0,0,0,.3)}
+  .bulk-bar .btn{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.15)}
+  .bulk-bar .btn:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3)}
+
+  /* ===== Inline edit ===== */
+  .cell-editable{cursor:cell;position:relative}
+  .cell-editable:hover{background:#eef4ff !important;outline:1px dashed #94a3b8;outline-offset:-2px}
+  .inline-input{width:100%;border:1px solid var(--navy);border-radius:6px;padding:4px 8px;outline:none;font-size:13px;font-family:inherit;font-variant-numeric:tabular-nums;box-shadow:0 0 0 3px rgba(11,18,32,.12);background:#fff}
+
+  /* ===== Chart ===== */
+  .chart-wrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+  .chart-wrap h3{font-size:13px;font-weight:800;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+  .chart-wrap .c-sub{font-size:11px;color:var(--muted);font-weight:600}
+  .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:1200px){.chart-grid{grid-template-columns:1fr}}
+  .bar-row{display:grid;grid-template-columns:60px 1fr 80px;align-items:center;gap:10px;padding:4px 0;font-size:12px}
+  .bar-row .lbl{color:var(--text-2);font-weight:700}
+  .bar-row .val{color:var(--text);font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+  .bar-track{height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+  .bar-fill{height:100%;background:var(--navy);border-radius:99px;transition:width .4s ease}
+  .line-chart{position:relative;height:160px;padding:20px 8px 28px;box-sizing:border-box}
+  .line-chart .chart-svg{width:100%;height:100%;display:block;overflow:visible}
+  .line-chart .chart-xlabels{position:absolute;left:8px;right:8px;bottom:4px;display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums;pointer-events:none}
+  .line-chart .chart-max{position:absolute;top:2px;left:8px;font-size:10px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums}
+  .line-chart .line-path{fill:none;stroke:var(--navy);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+  .line-chart .area-path{fill:rgba(11,18,32,0.06);stroke:none}
+  .line-chart .dot{fill:var(--navy)}
+
+  /* ===== Trash/archive marker ===== */
+  .row-deleted td{opacity:.5;text-decoration:line-through}
+
+  /* ===== Kbd ===== */
+  kbd{background:var(--surface-2);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px;font-size:11px;font-weight:700;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--text-2)}
+
+  .discount-pane{min-height:52px}
+
+  /* ===== Modal form styles (compact) ===== */
+  .form-card{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0}
+  .form-title{font-size:12px;font-weight:800;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .form-title .form-sub{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:0}
+  .field{min-width:0}
+  .field > label{display:block;font-size:10.5px;color:var(--muted);font-weight:700;letter-spacing:0.04em;margin-bottom:4px;text-transform:uppercase}
+  .field > label .field-aux{text-transform:none;color:var(--blue);font-size:10px;background:var(--blue-bg);border:1px solid var(--blue-line);padding:0 5px;border-radius:4px;margin-left:4px;letter-spacing:0}
+  .field > label .field-aux.manual{color:var(--red);background:var(--red-bg);border-color:var(--red-line)}
+  .field .input{padding:8px 10px;font-size:13px}
+  .field-hint{font-size:11px;color:var(--muted);margin-top:4px;font-weight:500}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  @media (max-width:720px){.grid-3{grid-template-columns:1fr 1fr}}
+  .chipset{display:flex;flex-wrap:wrap;gap:5px}
+  .chipset .mini-btn{padding:5px 9px;font-size:11.5px;border-radius:7px}
+  .modal-scroll{scrollbar-gutter:stable}
+  /* 모달이 좁을 때 2열 → 1열로 */
+  @media (max-width:880px){
+    .modal-panel > .modal-scroll{grid-template-columns:1fr !important}
+  }
 </style>
 </head>
 <body>
-<div class="app">
+<!-- ===== Login overlay (Firebase Auth) ===== -->
+<div id="authOverlay">
+  <div class="auth-card">
+    <div class="logo">S</div>
+    <h1>상담 매출 관리</h1>
+    <p class="sub">SBS Academy 3-1 · 내부 전용 시스템<br>허용된 계정으로만 접근할 수 있어요</p>
+
+    <!-- 구글 로그인 -->
+    <button class="g-btn" onclick="loginWithGoogle()">
+      <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 34.9 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.1 5.6l6.2 5.2C41.2 35.3 44 30 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>
+      Google 계정으로 로그인
+    </button>
+
+    <!-- 구분선 -->
+    <div class="auth-divider"><span>또는</span></div>
+
+    <!-- 이메일/비밀번호 토글 -->
+    <button class="auth-toggle" type="button" onclick="toggleEmailLogin()">
+      <span id="emailLoginLabel">이메일·비밀번호로 로그인</span>
+      <span id="emailLoginArrow">▾</span>
+    </button>
+
+    <!-- 이메일 로그인 폼 -->
+    <form id="emailLoginForm" class="auth-email-form" onsubmit="return loginWithEmail(event)">
+      <input id="loginEmail" class="auth-input" type="email" placeholder="이메일" autocomplete="username" required />
+      <input id="loginPassword" class="auth-input" type="password" placeholder="비밀번호" autocomplete="current-password" required />
+      <button type="submit" class="auth-submit">로그인</button>
+    </form>
+
+    <div id="authError" class="err"></div>
+    <div id="authLoading" class="loading">로그인 처리 중...</div>
+    <div class="footer">접속 문의: 관리자에게 이메일을 전달해주세요</div>
+  </div>
+</div>
+
+<div class="app" id="appRoot" style="display:none">
   <!-- ===== Topbar ===== -->
   <header class="topbar">
     <div class="brand">
@@ -203,8 +401,10 @@
     </div>
     <div class="topbar-right">
       <span id="syncIndicator" class="hidden" data-state="idle"></span>
-      <button class="btn btn-sm" onclick="manualRefresh()" title="시트에서 최신 데이터 불러오기">↻ 새로고침</button>
-      <button class="btn btn-primary btn-sm" onclick="openModal()">＋ 새 상담</button>
+      <button class="btn btn-sm" onclick="openTrash()" title="최근 30일 삭제 기록"> 휴지통 <span id="trashBadge" style="font-size:10px;background:var(--surface-2);padding:1px 5px;border-radius:99px;font-weight:800;margin-left:2px">0</span></button>
+      <button class="btn btn-sm" onclick="exportCSV()" title="현재 필터된 목록을 CSV로 내보내기">↓ CSV</button>
+      <button class="btn btn-primary btn-sm" onclick="openModal()" title="새 상담 기록 (Ctrl/⌘ + N)">＋ 새 상담</button>
+      <span id="userChip" class="user-chip" onclick="logout()" title="클릭하면 로그아웃"></span>
     </div>
   </header>
 
@@ -230,7 +430,7 @@
     <!-- KPI -->
     <div class="kpi">
       <div class="kpi-cell"><span class="l">총 상담</span><span class="v" id="totalCount">0</span><span class="d" id="kpiCountSub">이번 기간</span></div>
-      <div class="kpi-cell"><span class="l">실결제 합계</span><span class="v" id="totalSales">0</span><span class="d">최종 결제 기준</span></div>
+      <div class="kpi-cell"><span class="l">실결제 합계</span><span class="v" id="totalSales">0</span><span class="d" id="bonusSumLabel">최종 결제 기준</span></div>
       <div class="kpi-cell"><span class="l">매출 (입금)</span><span class="v pos" id="paidSales">0</span><span class="d">실제 입금액</span></div>
       <div class="kpi-cell"><span class="l">미수 잔액</span><span class="v neg" id="remainingSales">0</span><span class="d">회수 필요</span></div>
       <div class="kpi-cell"><span class="l">등록 전환율</span><span class="v" id="conversionRate">0%</span><span class="d">등록 ÷ 전체</span></div>
@@ -246,12 +446,34 @@
       </div>
     </div>
 
+    <!-- Charts -->
+    <div class="chart-grid">
+      <div class="chart-wrap">
+        <h3>월별 매출 추이 <span class="c-sub">최근 6개월 · 실결제 기준</span></h3>
+        <div id="monthlyChart" class="line-chart"></div>
+      </div>
+      <div class="chart-wrap">
+        <h3>멘토별 매출 <span class="c-sub">현재 필터 기준 · 상위 6명</span></h3>
+        <div id="mentorBarChart"></div>
+      </div>
+    </div>
+
+    <!-- Bulk action bar (only when selection) -->
+    <div id="bulkBar" class="bulk-bar" style="display:none">
+      <div><b id="bulkCount">0</b>건 선택됨</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn btn-sm" onclick="bulkChangeResult()">상태 일괄 변경</button>
+        <button class="btn btn-sm" onclick="bulkDelete()" style="background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.3);color:#fff">일괄 삭제</button>
+        <button class="btn btn-sm" onclick="clearSelection()">선택 해제</button>
+      </div>
+    </div>
+
     <!-- Table -->
     <div class="table-wrap">
       <div class="table-head-bar">
         <div>
           <h2>상담 목록</h2>
-          <p class="sub">학생명 클릭 시 전체 내용 · 금액/할인/메모는 아이콘 클릭</p>
+          <p class="sub">학생명 클릭 · 전체 보기 · 숫자·날짜 더블클릭 시 인라인 편집</p>
         </div>
         <div class="sub" id="tableCountLabel">0건</div>
       </div>
@@ -260,6 +482,7 @@
           <thead>
             <tr>
               <th style="width:3px;padding:0"></th>
+              <th style="width:28px;padding:10px 0 10px 12px"><span class="ckbox" id="selectAllCb" onclick="toggleSelectAll()"></span></th>
               <th>상담일</th>
               <th>납부기한</th>
               <th>학생 · 멘토</th>
@@ -306,8 +529,24 @@
   </div>
   <div class="drawer-body">
     <dl id="detailContent" class="detail-grid"></dl>
+    <div id="detailHistory" style="margin-top:24px"></div>
   </div>
 </div>
+
+<!-- ===== Trash Drawer ===== -->
+<div id="trashDrawer" class="drawer">
+  <div class="drawer-h">
+    <h3>휴지통 · 최근 30일</h3>
+    <button class="btn btn-sm" onclick="closeTrash()">닫기</button>
+  </div>
+  <div class="drawer-body">
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px">삭제 후 30일 내에 복원할 수 있어요. 30일이 지나면 자동으로 영구 삭제됩니다.</p>
+    <div id="trashList"></div>
+  </div>
+</div>
+
+<!-- ===== Toasts ===== -->
+<div id="toastStack" class="toast-stack"></div>
 
 <div id="modal" class="modal-backdrop">
   <div class="modal-panel" style="max-width:1100px">
@@ -319,14 +558,18 @@
       <button onclick="closeModal()" class="btn btn-sm">닫기</button>
     </div>
 
-    <div class="p-6 grid gap-4 xl:grid-cols-[1.2fr_1fr] max-h-[78vh] overflow-auto">
-      <div class="space-y-4">
-        <div class="card p-4">
-          <h3 class="text-sm font-black text-slate-600 mb-3">분류</h3>
-          <div class="grid gap-3 md:grid-cols-3">
-            <div><label class="block text-xs text-slate-500 mb-1">상담 날짜</label><input id="date" type="date" class="input" /></div>
-            <div><label class="block text-xs text-slate-500 mb-1">납부기한</label><input id="deadline" type="date" class="input" /></div>
-            <div><label class="block text-xs text-slate-500 mb-1">결과</label>
+    <div class="modal-scroll" style="padding:18px 20px;display:grid;grid-template-columns:1.1fr 1fr;gap:14px;max-height:78vh;overflow:auto">
+
+      <!-- LEFT: 기본 정보 -->
+      <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+
+        <!-- 1. 분류 -->
+        <div class="form-card">
+          <h3 class="form-title">분류</h3>
+          <div class="grid-3">
+            <div class="field"><label>상담 날짜</label><input id="date" type="date" class="input" /></div>
+            <div class="field"><label>납부기한</label><input id="deadline" type="date" class="input" /></div>
+            <div class="field"><label>결과</label>
               <select id="result" class="input">
                 <option value="auto">자동 계산</option>
                 <option>등록</option><option>COD</option><option>미등록</option><option>추등</option><option>미완료</option>
@@ -335,81 +578,98 @@
           </div>
         </div>
 
-        <div class="card p-4">
-          <h3 class="text-sm font-black text-slate-600 mb-3">학생 / 분류</h3>
-          <div class="grid gap-3 md:grid-cols-2">
-            <div><label class="block text-xs text-slate-500 mb-1">학생명</label><input id="student" class="input" placeholder="학생명 입력" /></div>
-            <div><label class="block text-xs text-slate-500 mb-1">멘토</label><input id="mentor" class="input" placeholder="멘토명 입력" /></div>
+        <!-- 2. 학생 -->
+        <div class="form-card">
+          <h3 class="form-title">학생 / 멘토</h3>
+          <div class="grid-2">
+            <div class="field"><label>학생명</label><input id="student" class="input" placeholder="학생명 입력" /></div>
+            <div class="field"><label>멘토</label><input id="mentor" class="input" placeholder="멘토명 입력" /></div>
           </div>
-          <div class="mt-3"><label class="block text-xs text-slate-500 mb-2">과정</label>
-            <div class="flex flex-wrap gap-2 mb-3" id="coursePresetWrap"></div>
-            <div class="flex gap-2"><input id="courseAddInput" class="input" placeholder="추가할 과정명 입력" /><button class="btn" onclick="addCourse()">과정 추가</button></div>
-            <div class="mt-2 text-sm text-slate-500">선택 과정: <span id="selectedCourse" class="font-black text-slate-800">선택 안됨</span></div>
+          <div class="field" style="margin-top:10px"><label>과정</label>
+            <div class="chipset" id="coursePresetWrap"></div>
+            <div style="display:flex;gap:6px;margin-top:8px;align-items:center">
+              <input id="courseAddInput" class="input" placeholder="과정명 추가" style="flex:1 1 auto;min-width:0" />
+              <button class="btn btn-sm" onclick="addCourse()">추가</button>
+            </div>
+            <div class="field-hint">선택: <span id="selectedCourse" style="font-weight:800;color:var(--text)">선택 안됨</span></div>
           </div>
-          <div class="mt-4">
-            <label class="block text-xs text-slate-500 mb-2">결제권자</label>
-            <div id="payerWrap" class="flex flex-wrap gap-2"></div>
+          <div class="field" style="margin-top:10px">
+            <label>결제권자</label>
+            <div class="chipset" id="payerWrap"></div>
           </div>
-          <div class="mt-4">
-            <label class="block text-xs text-slate-500 mb-2">목적</label>
-            <div id="purposeWrap" class="flex flex-wrap gap-2"></div>
+          <div class="field" style="margin-top:10px">
+            <label>목적</label>
+            <div class="chipset" id="purposeWrap"></div>
           </div>
         </div>
       </div>
 
-      <div class="space-y-4">
-        <div class="card p-4">
-          <h3 class="text-sm font-black text-slate-600 mb-3">금액 정보</h3>
-          <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div><label class="block text-xs text-slate-500 mb-1">총금액</label><input id="price" class="input" inputmode="numeric" oninput="formatCurrencyInput(this); updatePaymentPreview();" /></div>
-            <div><label class="block text-xs text-slate-500 mb-1">따즈아 금액</label><input id="ddazuaPrice" class="input" inputmode="numeric" oninput="formatCurrencyInput(this); updatePaymentPreview();" /></div>
-            <div><label class="block text-xs text-slate-500 mb-1">ACP 금액</label><input id="acpPrice" class="input" inputmode="numeric" oninput="formatCurrencyInput(this); updatePaymentPreview();" /></div>
-            <div><label class="block text-xs text-slate-500 mb-1">직권할인</label><input id="specialDiscount" class="input" inputmode="numeric" oninput="formatCurrencyInput(this); updatePaymentPreview();" /></div>
-          </div>
+      <!-- RIGHT: 금액 / 결제 -->
+      <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
 
-          <div class="mt-4">
-            <label class="block text-xs text-slate-500 mb-2">빠른 입력</label>
-            <div class="flex flex-wrap gap-2" id="quickPriceWrap"></div>
+        <!-- A. 할인 방식 (가장 먼저) -->
+        <div class="form-card">
+          <h3 class="form-title">할인 방식</h3>
+          <div style="display:flex;gap:6px;margin-bottom:10px">
+            <button type="button" id="supportBtn" class="toggle" onclick="setDiscountType('과목지원')">과목지원</button>
+            <button type="button" id="percentBtn" class="toggle" onclick="setDiscountType('%할인')">% 할인</button>
+            <button type="button" id="noDiscountBtn" class="toggle active" onclick="setDiscountType('')">할인 없음</button>
           </div>
-          <div class="mt-4">
-            <label class="block text-xs text-slate-500 mb-2">ACP 과목 빠른 입력</label>
-            <div class="flex flex-wrap gap-2" id="acpPresetWrap"></div>
+          <div id="discountPane" class="discount-pane"></div>
+        </div>
+
+        <!-- B. 수강료 (총금액) -->
+        <div class="form-card">
+          <h3 class="form-title">수강료 <span class="form-sub">총금액 · 할인 적용 전</span></h3>
+          <div class="field"><label>총금액</label><input id="price" class="input" inputmode="numeric" oninput="formatCurrencyInput(this); updatePaymentPreview();" /></div>
+          <div class="field" style="margin-top:10px"><label>빠른 입력</label><div class="chipset" id="quickPriceWrap"></div></div>
+        </div>
+
+        <!-- C. 수강료 외 (매출외수당) -->
+        <div class="form-card">
+          <h3 class="form-title">수강료 외 <span class="form-sub">매출외수당 = 따즈아 + ACP</span></h3>
+          <div class="grid-2">
+            <div class="field"><label>따즈아 금액</label><input id="ddazuaPrice" class="input" inputmode="numeric" oninput="formatCurrencyInput(this); updatePaymentPreview();" /></div>
+            <div class="field"><label>ACP 금액</label><input id="acpPrice" class="input" inputmode="numeric" oninput="formatCurrencyInput(this); updatePaymentPreview();" /></div>
+          </div>
+          <div class="field" style="margin-top:10px"><label>따즈아 빠른 입력</label><div class="chipset" id="ddazuaQuickWrap"></div></div>
+          <div class="field" style="margin-top:10px"><label>ACP 과목 빠른 입력</label><div class="chipset" id="acpPresetWrap"></div></div>
+          <div class="field-hint" style="margin-top:8px">매출외수당 합계 <b id="bonusTotal" style="color:var(--text);font-variant-numeric:tabular-nums">0</b></div>
+        </div>
+
+        <!-- D. 결제 정보 -->
+        <div class="form-card">
+          <h3 class="form-title">결제 정보</h3>
+          <div class="grid-2">
+            <div class="field">
+              <label>납부금액 <span class="field-aux" id="payableAuto">자동</span></label>
+              <input id="payableAmount" class="input" inputmode="numeric" oninput="formatCurrencyInput(this); onPayableManualEdit();" />
+              <div class="field-hint">총금액에서 할인 차감한 금액</div>
+            </div>
+            <div class="field"><label>직권할인</label><input id="specialDiscount" class="input" inputmode="numeric" oninput="formatCurrencyInput(this); updatePaymentPreview();" /></div>
+            <div class="field">
+              <label>실결제금액</label>
+              <input id="finalPrice" class="input" style="background:var(--surface-2);font-weight:800" readonly />
+              <div class="field-hint">납부금액 − 직권할인</div>
+            </div>
+            <div class="field"><label>매출 (입금)</label><input id="paid" class="input" inputmode="numeric" oninput="formatCurrencyInput(this); updateRemain();" /></div>
+          </div>
+          <div class="field" style="margin-top:10px">
+            <label>잔액</label>
+            <input id="remain" class="input" style="background:var(--surface-2);font-weight:800;color:var(--red)" readonly />
+            <div class="field-hint">실결제금액 − 매출</div>
           </div>
         </div>
 
-        <div class="card p-4">
-          <div class="grid gap-4 md:grid-cols-[200px_1fr] items-start">
-            <div>
-              <h3 class="text-sm font-black text-slate-600 mb-3">할인 방식</h3>
-              <div class="flex gap-2">
-                <button type="button" id="supportBtn" class="toggle" onclick="setDiscountType('과목지원')">과목지원</button>
-                <button type="button" id="percentBtn" class="toggle" onclick="setDiscountType('%할인')">% 할인</button>
-              </div>
-            </div>
-            <div class="card p-3 discount-pane">
-              <div id="discountPane" class="grid gap-3 md:grid-cols-2 items-end"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="grid gap-4 md:grid-cols-2">
-          <div class="card p-4">
-            <h3 class="text-sm font-black text-slate-600 mb-3">결제 정보</h3>
-            <div class="grid gap-3 md:grid-cols-2">
-              <div><label class="block text-xs text-slate-500 mb-1">실결제 금액</label><input id="finalPrice" class="input" style="background:var(--surface-2)" readonly /></div>
-              <div><label class="block text-xs text-slate-500 mb-1">매출</label><input id="paid" class="input" inputmode="numeric" oninput="formatCurrencyInput(this); updateRemain();" /></div>
-              <div><label class="block text-xs text-slate-500 mb-1">잔액</label><input id="remain" class="input" style="background:var(--surface-2)" readonly /></div>
-            </div>
-          </div>
-          <div class="card p-4">
-            <h3 class="text-sm font-black text-slate-600 mb-3">특이사항</h3>
-            <textarea id="memo" class="input" style="min-height:128px;resize:vertical" placeholder="상담 메모, 이슈, 후속 확인 내용"></textarea>
-          </div>
+        <!-- E. 특이사항 -->
+        <div class="form-card">
+          <h3 class="form-title">특이사항</h3>
+          <textarea id="memo" class="input" style="min-height:88px;resize:vertical" placeholder="상담 메모, 이슈, 후속 확인 내용"></textarea>
         </div>
       </div>
     </div>
 
-    <div style="padding:14px 22px;border-top:1px solid var(--line-soft);display:flex;gap:8px;background:#fff;position:sticky;bottom:0">
+    <div style="padding:14px 20px;border-top:1px solid var(--line-soft);display:flex;gap:8px;background:#fff;position:sticky;bottom:0">
       <button onclick="closeModal()" class="btn" style="flex:1">취소</button>
       <button onclick="saveData()" id="saveButton" class="btn btn-primary" style="flex:1">저장하기</button>
     </div>
@@ -420,12 +680,17 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbwdEWt6oUIoWJ7KVYz4_5GjS4Y9igKLmEbnshVafIKlQTE_ltRZb2-hjqVTw0glOODteQ/exec";
 const STORAGE_KEY = 'consult-dashboard-rows-v2';
 const LAST_SYNC_KEY = 'consult-dashboard-last-sync';
-const REFRESH_IF_OLDER_MS = 30 * 1000; // 탭 재활성화 시 30초 이상 경과하면 새로고침
+const TRASH_KEY = 'consult-dashboard-trash-v1';
+const REFRESH_IF_OLDER_MS = 30 * 1000;
+const TRASH_TTL_DAYS = 30;
 
 let rows = [];
+let trash = [];                 // 휴지통 (로컬)
+let selectedIds = new Set();    // 일괄작업용
+let initialLoading = true;      // 스켈레톤 표시용
 let editIndex = null;
-let syncing = false;          // 동기화 중 플래그
-let pendingOps = 0;            // 진행 중인 서버 호출 수
+let syncing = false;
+let pendingOps = 0;
 let lastSyncAt = 0;
 let currentMonth = '전체';
 let currentResult = '전체';
@@ -436,6 +701,7 @@ let courseOptions = ['편집','모션','실내','웹툰','드로잉','마야','�
 const payerOptions = ['본인','부모님','친구','지인'];
 const purposeOptions = ['취업','취미','창업','보충'];
 const quickAmounts = [320000,390000,500000,990000];
+const ddazuaQuickAmounts = [50000,100000,150000,200000,300000];
 const acpMap = {1:70000,2:130000,3:190000,4:250000,5:310000};
 
 function onlyNumber(v){ return String(v || '').replace(/[^0-9]/g,''); }
@@ -448,32 +714,499 @@ function monthFromDate(dateValue){ const text = String(dateValue||''); const m =
 function isoTime(dateValue){ const d = new Date(dateValue); return isNaN(d) ? 0 : d.getTime(); }
 
 function saveLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(rows)); }
-function loadLocal(){ try{ rows = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }catch(e){ rows = []; } }
+function loadLocal(){
+  try{ rows = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }catch(e){ rows = []; }
+  migrateLegacyRows();
+}
+// 예전 데이터 구조(payableAmount 없는) 자동 보정 — 새 계산식 기준으로 재생성
+function migrateLegacyRows(){
+  if(!Array.isArray(rows)) return;
+  let changed = 0;
+  rows.forEach(r => {
+    if(r.payableAmount == null){
+      // 신규 필드 채우기
+      r.payableAmount = computeAutoPayable(r.price, r.discountType, r.discountRate);
+      r.payableManual = false;
+      r.bonusTotal = Number(r.ddazuaPrice||0) + Number(r.acpPrice||0);
+      // 예전엔 finalPrice = 총금액-할인-직권+따즈아+ACP였음 → 새 공식으로 재계산
+      const newFinal = Math.max(Number(r.payableAmount||0) - Number(r.specialDiscount||0), 0);
+      if(r.finalPrice !== newFinal){
+        r.finalPrice = newFinal;
+      }
+      changed++;
+    }
+  });
+  if(changed > 0){
+    console.log(`[마이그레이션] ${changed}건의 데이터를 새 계산식으로 변환했습니다`);
+    saveLocal();
+  }
+}
+function saveTrash(){ localStorage.setItem(TRASH_KEY, JSON.stringify(trash)); }
+function loadTrash(){
+  try{ trash = JSON.parse(localStorage.getItem(TRASH_KEY) || '[]'); }catch(e){ trash = []; }
+  // 30일 지난 항목 자동 비우기
+  const cutoff = Date.now() - TRASH_TTL_DAYS * 86400 * 1000;
+  trash = trash.filter(t => t.deletedAt >= cutoff);
+  saveTrash();
+}
+
+// ─────────────────────────────────────────
+// 토스트 알림
+// ─────────────────────────────────────────
+let toastCounter = 0;
+function toast(message, { type='info', action=null, duration=4000 } = {}){
+  const stack = document.getElementById('toastStack');
+  if(!stack) return;
+  const id = 't' + (++toastCounter);
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.id = id;
+  const iconText = type==='success'?'✓':type==='error'?'!':'ⓘ';
+  const actionHtml = action ? `<span class="t-action" data-act="1">${action.label}</span>` : '';
+  el.innerHTML = `<span class="t-icon">${iconText}</span><div class="t-body">${message}${actionHtml}</div><span class="t-close">×</span>`;
+  stack.appendChild(el);
+  const close = () => { el.style.transition='.2s'; el.style.opacity='0'; el.style.transform='translateY(8px)'; setTimeout(()=>el.remove(),200); };
+  el.querySelector('.t-close').addEventListener('click', close);
+  if(action){
+    el.querySelector('[data-act]').addEventListener('click', ()=>{ try{ action.onClick(); }catch(e){} close(); });
+  }
+  if(duration>0) setTimeout(close, duration);
+  return { close };
+}
+
+// ─────────────────────────────────────────
+// CSV 내보내기
+// ─────────────────────────────────────────
+function exportCSV(){
+  const filtered = getFilteredRows();
+  if(!filtered.length){ toast('내보낼 데이터가 없습니다', {type:'info'}); return; }
+  const headers = ['상담일','납부기한','학생명','멘토','과정','결과','총금액','납부금액','직권할인','실결제','매출','잔액','따즈아','ACP','매출외수당','할인방식','할인율','결제권자','목적','특이사항'];
+  const esc = v => { const s = String(v==null?'':v); return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
+  const lines = [headers.join(',')];
+  filtered.forEach(r=>{
+    const remain = Math.max(Number(r.finalPrice||0)-Number(r.paid||0),0);
+    const payable = r.payableAmount != null ? Number(r.payableAmount) : computeAutoPayable(r.price, r.discountType, r.discountRate);
+    const bonus = Number(r.bonusTotal || 0) || (Number(r.ddazuaPrice||0) + Number(r.acpPrice||0));
+    lines.push([
+      r.date, r.deadline, r.student, r.mentor, r.course, r.displayResult,
+      r.price, payable, r.specialDiscount, r.finalPrice, r.paid, remain,
+      r.ddazuaPrice, r.acpPrice, bonus,
+      r.discountType, r.discountType==='%할인'?(r.discountRate||0)+'%':'',
+      r.payer, r.purpose, r.memo
+    ].map(esc).join(','));
+  });
+  const csv = '\ufeff' + lines.join('\r\n'); // UTF-8 BOM for Excel
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const today = todayStr();
+  const scope = currentMonth==='전체' ? 'all' : currentMonth;
+  a.href = url; a.download = `상담목록_${scope}_${today}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast(`${filtered.length}건을 CSV로 내보냈습니다`, {type:'success'});
+}
+
+// ─────────────────────────────────────────
+// 휴지통
+// ─────────────────────────────────────────
+function openTrash(){ renderTrash(); document.getElementById('trashDrawer').classList.add('open'); }
+function closeTrash(){ document.getElementById('trashDrawer').classList.remove('open'); }
+function updateTrashBadge(){
+  const b = document.getElementById('trashBadge');
+  if(b) b.textContent = trash.length;
+}
+function renderTrash(){
+  const list = document.getElementById('trashList');
+  if(!list) return;
+  if(!trash.length){
+    list.innerHTML = '<div class="empty-state" style="padding:24px 0"><div class="e-title">휴지통이 비어 있습니다</div></div>';
+    return;
+  }
+  list.innerHTML = trash.slice().sort((a,b)=>b.deletedAt-a.deletedAt).map(t=>{
+    const r = t.row;
+    const daysLeft = Math.max(0, Math.ceil((t.deletedAt + TRASH_TTL_DAYS*86400*1000 - Date.now())/86400000));
+    return `<div class="mentor-row">
+      <div class="n">
+        <span class="name">${r.student || '-'}</span>
+        <span style="font-size:11px;color:var(--muted);font-weight:700">${daysLeft}일 후 영구삭제</span>
+      </div>
+      <div class="meta">${displayDate(r.date)} · ${r.mentor||''} · ${r.course||''} · ${format(r.finalPrice)}</div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="btn btn-sm" onclick="restoreFromTrash('${t.trashId}')">복원</button>
+        <button class="btn btn-sm" style="color:var(--red)" onclick="purgeTrash('${t.trashId}')">영구 삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function restoreFromTrash(trashId){
+  const idx = trash.findIndex(t => t.trashId === trashId);
+  if(idx === -1) return;
+  const item = trash[idx];
+  // row를 id 유지한 채 다시 추가 (시트엔 새로 create)
+  const restored = { ...item.row };
+  delete restored.id; // 새 id 발급받도록
+  trash.splice(idx, 1);
+  saveTrash(); updateTrashBadge(); renderTrash();
+  restored.id = makeLocalId();
+  rows.push(restored);
+  saveLocal(); renderAll();
+  try{
+    const result = await apiCall('create', { row: toServerRow(restored) });
+    if(result?.id){
+      const i = rows.findIndex(r => r.id === restored.id);
+      if(i !== -1){ rows[i].id = result.id; saveLocal(); }
+    }
+    toast('복원했습니다', {type:'success'});
+  }catch(err){
+    toast('복원 중 시트 반영에 실패했습니다. 새로고침 후 확인해주세요.', {type:'error', duration:6000});
+  }
+}
+function purgeTrash(trashId){
+  if(!confirm('이 항목을 영구적으로 삭제할까요? 되돌릴 수 없습니다.')) return;
+  trash = trash.filter(t => t.trashId !== trashId);
+  saveTrash(); updateTrashBadge(); renderTrash();
+  toast('영구 삭제했습니다', {type:'info'});
+}
+
+// ─────────────────────────────────────────
+// 선택 / 일괄 작업
+// ─────────────────────────────────────────
+function toggleSelect(id){
+  if(selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+  updateBulkBar();
+  renderTable(getFilteredRows());
+}
+function toggleSelectAll(){
+  const filtered = getFilteredRows();
+  const visibleIds = filtered.map(r=>r.id).filter(Boolean);
+  const allSelected = visibleIds.length>0 && visibleIds.every(id => selectedIds.has(id));
+  if(allSelected){ visibleIds.forEach(id=>selectedIds.delete(id)); }
+  else { visibleIds.forEach(id=>selectedIds.add(id)); }
+  updateBulkBar();
+  renderTable(getFilteredRows());
+}
+function clearSelection(){ selectedIds.clear(); updateBulkBar(); renderTable(getFilteredRows()); }
+function updateBulkBar(){
+  const bar = document.getElementById('bulkBar');
+  const cnt = document.getElementById('bulkCount');
+  if(!bar) return;
+  bar.style.display = selectedIds.size>0 ? 'flex' : 'none';
+  if(cnt) cnt.textContent = selectedIds.size;
+  // 헤더 체크박스 상태 동기화
+  const filtered = getFilteredRows();
+  const visibleIds = filtered.map(r=>r.id).filter(Boolean);
+  const allCb = document.getElementById('selectAllCb');
+  if(allCb){
+    const all = visibleIds.length>0 && visibleIds.every(id=>selectedIds.has(id));
+    allCb.classList.toggle('checked', all);
+  }
+}
+async function bulkDelete(){
+  const ids = [...selectedIds];
+  if(!ids.length) return;
+  if(!confirm(`선택한 ${ids.length}건을 삭제할까요? (휴지통으로 이동되며 30일 내 복원 가능)`)) return;
+  const targets = ids.map(id => rows.find(r=>r.id===id)).filter(Boolean);
+  // 휴지통으로 이동
+  targets.forEach(r => {
+    trash.push({ trashId:'tr-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), row:JSON.parse(JSON.stringify(r)), deletedAt:Date.now() });
+  });
+  saveTrash(); updateTrashBadge();
+  // rows에서 제거
+  rows = rows.filter(r => !selectedIds.has(r.id));
+  saveLocal();
+  selectedIds.clear();
+  updateBulkBar();
+  renderAll();
+  toast(`${targets.length}건을 삭제했습니다`, {type:'success', action:{label:'실행 취소', onClick:()=>undoBulkDelete(targets.map(r=>r.id))}, duration:6000});
+  // 시트 반영 (서버에 있는 것만)
+  for(const r of targets){
+    if(r.id && !String(r.id).startsWith('local-')){
+      try{ await apiCall('delete', { id: r.id }); }catch(e){ console.error('삭제 반영 실패', e); }
+    }
+  }
+}
+async function undoBulkDelete(ids){
+  // 휴지통에서 해당 항목들 복원
+  const toRestore = trash.filter(t => ids.includes(t.row.id));
+  trash = trash.filter(t => !ids.includes(t.row.id));
+  saveTrash(); updateTrashBadge();
+  for(const item of toRestore){
+    const restored = JSON.parse(JSON.stringify(item.row));
+    delete restored.id;
+    restored.id = makeLocalId();
+    rows.push(restored);
+    try{
+      const result = await apiCall('create', { row: toServerRow(restored) });
+      if(result?.id){
+        const i = rows.findIndex(r => r.id === restored.id);
+        if(i !== -1) rows[i].id = result.id;
+      }
+    }catch(e){}
+  }
+  saveLocal(); renderAll();
+  toast(`${toRestore.length}건을 복원했습니다`, {type:'success'});
+}
+async function bulkChangeResult(){
+  const ids = [...selectedIds];
+  if(!ids.length) return;
+  const choice = prompt('변경할 결과를 입력하세요: 등록 / COD / 미등록 / 추등 / 미완료', '등록');
+  if(!choice) return;
+  const valid = ['등록','COD','미등록','추등','미완료'];
+  if(!valid.includes(choice)){ toast('올바른 결과값을 입력해주세요', {type:'error'}); return; }
+  const targets = rows.filter(r => ids.includes(r.id));
+  targets.forEach(r => { r.result = choice; r.displayResult = getAutoResult(r)==='등록' && choice!=='등록' ? choice : (choice==='auto'?getAutoResult(r):choice); r.displayResult = choice; });
+  saveLocal(); renderAll();
+  toast(`${targets.length}건의 상태를 "${choice}"로 변경했습니다`, {type:'success'});
+  for(const r of targets){
+    if(r.id && !String(r.id).startsWith('local-')){
+      try{ await apiCall('update', { id: r.id, row: toServerRow(r) }); }catch(e){}
+    }
+  }
+}
+
+// ─────────────────────────────────────────
+// 인라인 편집
+// ─────────────────────────────────────────
+let inlineEditState = null;
+function startInlineEdit(td, id, field, currentValue){
+  if(inlineEditState) cancelInlineEdit();
+  const original = td.innerHTML;
+  const isNumber = ['paid','price','ddazuaPrice','acpPrice','specialDiscount'].includes(field);
+  const isDate = ['date','deadline'].includes(field);
+  const isSelect = field === 'displayResult';
+  let inputHtml;
+  if(isSelect){
+    inputHtml = `<select class="inline-input">${['등록','COD','미등록','추등','미완료'].map(v=>`<option ${v===currentValue?'selected':''}>${v}</option>`).join('')}</select>`;
+  } else if(isDate){
+    inputHtml = `<input class="inline-input" type="date" value="${currentValue||''}">`;
+  } else if(isNumber){
+    inputHtml = `<input class="inline-input" type="text" inputmode="numeric" value="${format(currentValue||0)}">`;
+  } else {
+    inputHtml = `<input class="inline-input" type="text" value="${String(currentValue||'').replace(/"/g,'&quot;')}">`;
+  }
+  td.innerHTML = inputHtml;
+  const inp = td.querySelector('.inline-input');
+  inp.focus();
+  if(inp.select) inp.select();
+  inlineEditState = { td, id, field, original, inp };
+  inp.addEventListener('keydown', e => {
+    if(e.key==='Enter'){ e.preventDefault(); commitInlineEdit(); }
+    if(e.key==='Escape'){ cancelInlineEdit(); }
+  });
+  inp.addEventListener('blur', ()=> setTimeout(commitInlineEdit, 80));
+}
+function cancelInlineEdit(){
+  if(!inlineEditState) return;
+  inlineEditState.td.innerHTML = inlineEditState.original;
+  inlineEditState = null;
+}
+async function commitInlineEdit(){
+  if(!inlineEditState) return;
+  const { id, field, inp } = inlineEditState;
+  inlineEditState = null;
+  const r = rows.find(x=>x.id===id);
+  if(!r){ renderAll(); return; }
+  let val = inp.value;
+  if(['paid','price','ddazuaPrice','acpPrice','specialDiscount'].includes(field)) val = num(val);
+  const snapshot = JSON.parse(JSON.stringify(r));
+  r[field] = val;
+  // 금액류 변경 시 실결제/잔액 재계산
+  if(['price','ddazuaPrice','acpPrice','specialDiscount'].includes(field)){
+    r.finalPrice = computeFinalPriceFromRow(r);
+  }
+  if(['paid','price','ddazuaPrice','acpPrice','specialDiscount','deadline','result'].includes(field)){
+    r.displayResult = getAutoResult(r);
+  }
+  if(field === 'displayResult'){ r.result = val; r.displayResult = val; }
+  saveLocal(); renderAll();
+  if(!r.id || String(r.id).startsWith('local-')) return;
+  try{
+    await apiCall('update', { id: r.id, row: toServerRow(r) });
+    toast('수정했습니다', {type:'success', duration:1500});
+  }catch(err){
+    Object.assign(r, snapshot);
+    saveLocal(); renderAll();
+    toast('수정 실패: ' + (err.message||err), {type:'error'});
+  }
+}
+function computeFinalPriceFromRow(r){
+  // 새 공식: 실결제 = 납부금액 - 직권할인
+  // 납부금액은 수동값 우선, 없으면 자동 계산 (총금액 - %할인)
+  const autoPayable = computeAutoPayable(r.price, r.discountType, r.discountRate);
+  const payable = (r.payableManual && r.payableAmount != null) ? Number(r.payableAmount) : autoPayable;
+  return Math.max(payable - Number(r.specialDiscount||0), 0);
+}
+
+// ─────────────────────────────────────────
+// 차트
+// ─────────────────────────────────────────
+function renderCharts(filtered){
+  renderMonthlyChart();
+  renderMentorBarChart(filtered);
+}
+function renderMonthlyChart(){
+  const el = document.getElementById('monthlyChart');
+  if(!el) return;
+  // rows 전체에서 최근 6개월
+  const byMonth = {};
+  rows.forEach(r => {
+    const m = String(r.date||'').slice(0,7); // YYYY-MM
+    if(!m) return;
+    byMonth[m] = (byMonth[m]||0) + Number(r.paid||0);
+  });
+  const months = Object.keys(byMonth).sort().slice(-6);
+  if(!months.length){ el.innerHTML = '<div class="empty-state" style="padding:24px 0"><div class="e-sub">데이터가 쌓이면 추이가 표시됩니다</div></div>'; return; }
+  const values = months.map(m => byMonth[m]);
+  const max = Math.max(...values, 1);
+  // SVG 좌표계: 0~100 폭 × 0~100 높이
+  const W = 100, H = 100;
+  const step = months.length>1 ? W/(months.length-1) : 0;
+  const pts = values.map((v,i) => [i*step, H - (v/max)*H]);
+  const linePath = pts.map((p,i)=> (i===0?'M':'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  const areaPath = linePath + ` L ${((months.length-1)*step).toFixed(1)},${H} L 0,${H} Z`;
+  const dots = pts.map(p => `<circle class="dot" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="1.5"/>`).join('');
+  // X축 레이블은 HTML로 분리 (세로로 찌그러지지 않도록)
+  const xLabels = months.map(m => {
+    const [, mm] = m.split('-');
+    return `<span>${parseInt(mm,10)}월</span>`;
+  }).join('');
+  el.innerHTML = `
+    <div class="chart-max">${format(max)}</div>
+    <svg class="chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+      <path class="area-path" d="${areaPath}" />
+      <path class="line-path" d="${linePath}" />
+      ${dots}
+    </svg>
+    <div class="chart-xlabels">${xLabels}</div>`;
+}
+function renderMentorBarChart(filtered){
+  const el = document.getElementById('mentorBarChart');
+  if(!el) return;
+  const byMentor = {};
+  filtered.forEach(r => {
+    const k = r.mentor || '미지정';
+    byMentor[k] = (byMentor[k]||0) + Number(r.finalPrice||0);
+  });
+  const entries = Object.entries(byMentor).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  if(!entries.length){ el.innerHTML = '<div class="empty-state" style="padding:24px 0"><div class="e-sub">표시할 멘토 데이터가 없습니다</div></div>'; return; }
+  const max = entries[0][1] || 1;
+  el.innerHTML = entries.map(([k,v])=>{
+    const w = (v/max*100).toFixed(1);
+    return `<div class="bar-row"><span class="lbl">${k}</span><div class="bar-track"><div class="bar-fill" style="width:${w}%"></div></div><span class="val">${format(v)}</span></div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────
+// 스켈레톤 로더
+// ─────────────────────────────────────────
+function renderSkeletonTable(){
+  const t = document.getElementById('table');
+  if(!t) return;
+  const rowsHtml = Array.from({length:6}).map(()=>`
+    <tr><td class="bar"></td><td><span class="ckbox"></span></td>
+    ${Array.from({length:10}).map(()=>`<td><span class="skeleton" style="height:12px;width:${40+Math.random()*60}%;vertical-align:middle"></span></td>`).join('')}
+    </tr>`).join('');
+  t.innerHTML = rowsHtml;
+}
+
+// ─────────────────────────────────────────
+// 키보드 단축키
+// ─────────────────────────────────────────
+document.addEventListener('keydown', e=>{
+  const modalOpen = document.getElementById('modal').classList.contains('flex');
+  const editingInput = ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='n' && !modalOpen){ e.preventDefault(); openModal(); return; }
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='f' && !modalOpen){ e.preventDefault(); document.getElementById('search')?.focus(); return; }
+  if(e.key==='/' && !editingInput && !modalOpen){ e.preventDefault(); document.getElementById('search')?.focus(); }
+});
+
+// ─────────────────────────────────────────
+// 계산 로직 (신규)
+//
+//   수강료 (총금액) ─ 할인방식 ─→ 납부금액
+//     - 과목지원/없음: 납부금액 = 총금액
+//     - %할인: 납부금액 = 총금액 × (1 - 할인율/100)
+//   실결제금액 = 납부금액 - 직권할인
+//   매출외수당 = 따즈아 + ACP
+//   잔액 = 실결제금액 - 매출
+//
+//   납부금액은 자동계산이 기본이나, 사용자가 수동 덮어쓰기 가능
+//   (payableManual = true일 때 수동값 사용)
+// ─────────────────────────────────────────
+
+let payableManual = false;
 
 function computePercentDiscount(price, rate){ return Math.round(price * (Number(rate||0) / 100)); }
-function computeFinalPrice(rowLike={}){
-  const price = rowLike.price ?? num(document.getElementById('price').value);
-  const ddazuaPrice = rowLike.ddazuaPrice ?? num(document.getElementById('ddazuaPrice').value);
-  const acpPrice = rowLike.acpPrice ?? num(document.getElementById('acpPrice').value);
-  const specialDiscount = rowLike.specialDiscount ?? num(document.getElementById('specialDiscount').value);
-  const discountType = rowLike.discountType ?? currentDiscountType;
-  const discountRate = rowLike.discountRate ?? Number(document.getElementById('discountRate')?.value || 0);
-  const percentDiscountAmount = discountType === '%할인' ? computePercentDiscount(price, discountRate) : 0;
-  const baseAfterDiscount = Math.max(price - percentDiscountAmount - specialDiscount, 0);
-  return baseAfterDiscount + ddazuaPrice + acpPrice;
+
+function computeAutoPayable(price, discountType, discountRate){
+  if(discountType === '%할인'){
+    const rate = Number(discountRate||0);
+    return Math.round(Number(price||0) * Math.max(0, 100 - rate) / 100);
+  }
+  return Number(price||0);
 }
+
+function computeFinalPrice(rowLike={}){
+  // rowLike가 있으면 그 값 기준, 없으면 폼 현재값 기준
+  if(Object.keys(rowLike).length){
+    const payable = rowLike.payableAmount != null
+      ? Number(rowLike.payableAmount)
+      : computeAutoPayable(rowLike.price, rowLike.discountType, rowLike.discountRate);
+    return Math.max(payable - Number(rowLike.specialDiscount||0), 0);
+  }
+  const price = num(document.getElementById('price').value);
+  const rate = Number(document.getElementById('discountRate')?.value || 0);
+  const autoPayable = computeAutoPayable(price, currentDiscountType, rate);
+  const payable = payableManual
+    ? num(document.getElementById('payableAmount').value)
+    : autoPayable;
+  const special = num(document.getElementById('specialDiscount').value);
+  return Math.max(payable - special, 0);
+}
+
+function onPayableManualEdit(){
+  payableManual = true;
+  const aux = document.getElementById('payableAuto');
+  if(aux){ aux.textContent = '수동'; aux.classList.add('manual'); }
+  updatePaymentPreview({skipPayableRewrite:true});
+}
+
+function resetPayableAuto(){
+  payableManual = false;
+  const aux = document.getElementById('payableAuto');
+  if(aux){ aux.textContent = '자동'; aux.classList.remove('manual'); }
+}
+
+function updatePaymentPreview(opts={}){
+  const price = num(document.getElementById('price').value);
+  const rate = Number(document.getElementById('discountRate')?.value || 0);
+  const autoPayable = computeAutoPayable(price, currentDiscountType, rate);
+  const payableField = document.getElementById('payableAmount');
+
+  // 수동 모드가 아니면 자동 계산된 납부금액을 필드에 채움
+  if(!payableManual && !opts.skipPayableRewrite){
+    payableField.value = autoPayable ? format(autoPayable) : '';
+  }
+
+  const finalPrice = computeFinalPrice();
+  document.getElementById('finalPrice').value = finalPrice ? format(finalPrice) : '';
+
+  // 매출외수당 합계
+  const ddz = num(document.getElementById('ddazuaPrice').value);
+  const acp = num(document.getElementById('acpPrice').value);
+  const bt = document.getElementById('bonusTotal');
+  if(bt) bt.textContent = format(ddz + acp);
+
+  renderDiscountPane();
+  updateRemain();
+}
+
 function updateRemain(){
   const finalPrice = computeFinalPrice();
   const paid = num(document.getElementById('paid').value);
   const remain = Math.max(finalPrice - paid, 0);
-  document.getElementById('finalPrice').value = finalPrice ? format(finalPrice) : '';
-  document.getElementById('remain').value = remain ? format(remain) : '0';
-}
-function updatePaymentPreview(){
-  const finalPrice = computeFinalPrice();
-  document.getElementById('finalPrice').value = finalPrice ? format(finalPrice) : '';
-  renderDiscountPane();
-  updateRemain();
+  document.getElementById('remain').value = format(remain);
 }
 
 function getAutoResult(obj){
@@ -524,6 +1257,10 @@ function renderStats(filtered){
   const total = filtered.reduce((s,r)=>s+Number(r.finalPrice||0),0);
   const paid = filtered.reduce((s,r)=>s+Number(r.paid||0),0);
   const remain = filtered.reduce((s,r)=>s+Math.max(Number(r.finalPrice||0)-Number(r.paid||0),0),0);
+  const bonusSum = filtered.reduce((s,r)=>{
+    const bt = Number(r.bonusTotal || 0) || (Number(r.ddazuaPrice||0) + Number(r.acpPrice||0));
+    return s + bt;
+  }, 0);
   const conversion = filtered.length ? Math.round(((counts['등록']||0)/filtered.length)*100) : 0;
   totalCount.innerText = format(filtered.length);
   totalSales.innerText = format(total);
@@ -537,6 +1274,8 @@ function renderStats(filtered){
   incompleteCount.innerText = format(counts['미완료']);
   const kpiSub = document.getElementById('kpiCountSub');
   if(kpiSub) kpiSub.innerText = currentMonth === '전체' ? '전체 기간' : `${currentMonth} 기준`;
+  const bsl = document.getElementById('bonusSumLabel');
+  if(bsl) bsl.innerHTML = `매출외수당 <b style="color:var(--text);font-weight:800">${format(bonusSum)}</b>`;
   const tc = document.getElementById('tableCountLabel');
   if(tc) tc.innerText = `${format(filtered.length)}건`;
 }
@@ -591,30 +1330,43 @@ function monthGroupRows(rowsInput){
 }
 function renderTable(filtered){
   table.innerHTML = '';
+  if(!filtered.length){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="13"><div class="empty-state">
+      <div class="e-title">${rows.length ? '조건에 맞는 상담이 없어요' : '아직 상담 기록이 없어요'}</div>
+      <div class="e-sub">${rows.length ? '다른 월/결과 필터를 시도해보세요' : '첫 상담을 기록해보세요'}</div>
+      ${rows.length ? '' : '<button class="btn btn-primary" onclick="openModal()">＋ 첫 상담 기록하기</button>'}
+    </div></td>`;
+    table.appendChild(tr);
+    return;
+  }
   monthGroupRows(filtered).forEach(item=>{
     if(item.type === 'month'){
       const tr = document.createElement('tr');
       tr.className = 'month-head';
-      tr.innerHTML = `<td colspan="12">${item.label}</td>`;
+      tr.innerHTML = `<td colspan="13">${item.label}</td>`;
       table.appendChild(tr); return;
     }
     const r = item.row;
     const actualIndex = rows.indexOf(r);
     const result = r.displayResult || '미등록';
     const remain = Math.max(Number(r.finalPrice||0)-Number(r.paid||0),0);
+    const id = r.id || '';
+    const selected = selectedIds.has(id);
     const tr = document.createElement('tr');
-    tr.className = `r-${result}`;
+    tr.className = `r-${result}${selected?' selected':''}`;
     tr.innerHTML = `
       <td class="bar"></td>
-      <td style="color:var(--text-2);font-weight:600">${displayDate(r.date)}</td>
-      <td style="color:var(--text-2);font-weight:600">${displayDate(r.deadline)}</td>
+      <td style="padding:10px 0 10px 12px"><span class="ckbox ${selected?'checked':''}" onclick="event.stopPropagation(); toggleSelect('${id}')"></span></td>
+      <td class="cell-editable" style="color:var(--text-2);font-weight:600" data-id="${id}" data-field="date">${displayDate(r.date)}</td>
+      <td class="cell-editable" style="color:var(--text-2);font-weight:600" data-id="${id}" data-field="deadline">${displayDate(r.deadline)}</td>
       <td class="student-cell" style="min-width:180px">
         <div class="name" onclick="openDetail(${actualIndex})">${r.student || '-'}</div>
-        <div class="sub">${r.mentor || '-'}</div>
+        <div class="sub cell-editable" data-id="${id}" data-field="mentor" style="display:inline-block">${r.mentor || '-'}</div>
       </td>
       <td><span class="course-pill">${r.course || '-'}</span></td>
-      <td><span class="badge badge-${result}">${result}</span></td>
-      <td style="text-align:right"><span class="money paid" onclick="quickEditAmount(${actualIndex}, 'paid')">${format(r.paid)}</span></td>
+      <td class="cell-editable" data-id="${id}" data-field="displayResult"><span class="badge badge-${result}">${result}</span></td>
+      <td style="text-align:right" class="cell-editable" data-id="${id}" data-field="paid"><span class="money paid">${format(r.paid)}</span></td>
       <td style="text-align:right"><span class="money ${remain>0?'remain-pos':'remain-zero'}" onclick="quickEditAmount(${actualIndex}, 'remain')">${format(remain)}</span></td>
       <td style="text-align:center"><button class="icon-btn" onclick="showMiniDetail('금액 정보', ${actualIndex}, 'amount')">₩</button></td>
       <td style="text-align:center"><button class="icon-btn" onclick="showMiniDetail('할인 구성', ${actualIndex}, 'discount')">%</button></td>
@@ -627,20 +1379,44 @@ function renderTable(filtered){
       </td>`;
     table.appendChild(tr);
   });
+  // 더블클릭 → 인라인 편집 바인딩
+  table.querySelectorAll('.cell-editable').forEach(td => {
+    td.addEventListener('dblclick', e => {
+      const id = td.dataset.id; const field = td.dataset.field;
+      if(!id) return;
+      const r = rows.find(x=>x.id===id);
+      if(!r) return;
+      let cur = r[field];
+      if(field === 'displayResult') cur = r.displayResult || r.result || '미등록';
+      startInlineEdit(td, id, field, cur);
+    });
+  });
 }
 
 function showMiniDetail(title, index, type){
   const r = rows[index]; if(!r) return;
   detailTitle.textContent = `${r.student || '상세'} · ${title}`;
+  const bonusTotal = Number(r.bonusTotal || 0) || (Number(r.ddazuaPrice||0) + Number(r.acpPrice||0));
+  const payable = r.payableAmount != null ? Number(r.payableAmount) : computeAutoPayable(r.price, r.discountType, r.discountRate);
   let html = '';
   if(type === 'amount'){
-    html += `<dt>총금액</dt><dd>${format(r.price)}</dd><dt>따즈아</dt><dd>${format(r.ddazuaPrice)}</dd><dt>ACP</dt><dd>${format(r.acpPrice)}</dd><dt>직권할인</dt><dd>${format(r.specialDiscount)}</dd><dt>실결제</dt><dd>${format(r.finalPrice)}</dd><dt>매출</dt><dd>${format(r.paid)}</dd><dt>잔액</dt><dd>${format(Math.max(Number(r.finalPrice||0)-Number(r.paid||0),0))}</dd>`;
+    html += `
+      <dt>총금액 (수강료)</dt><dd>${format(r.price)}</dd>
+      <dt>납부금액</dt><dd>${format(payable)}${r.payableManual?' <span style="font-size:10px;color:var(--red);font-weight:700">(수동)</span>':''}</dd>
+      <dt>직권할인</dt><dd>${format(r.specialDiscount)}</dd>
+      <dt>실결제금액</dt><dd style="color:var(--blue)">${format(r.finalPrice)}</dd>
+      <dt>매출 (입금)</dt><dd>${format(r.paid)}</dd>
+      <dt>잔액</dt><dd style="color:var(--red)">${format(Math.max(Number(r.finalPrice||0)-Number(r.paid||0),0))}</dd>
+      <dt>따즈아</dt><dd>${format(r.ddazuaPrice)}</dd>
+      <dt>ACP</dt><dd>${format(r.acpPrice)}</dd>
+      <dt style="grid-column:1/-1;margin-top:8px;border-top:1px solid var(--line-soft);padding-top:8px">매출외수당 <span style="color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0">(따즈아+ACP)</span></dt>
+      <dd style="grid-column:1/-1;color:var(--blue);font-size:14px">${format(bonusTotal)}</dd>`;
   }else if(type === 'discount'){
-    const summary = r.discountType === '%할인' ? `%할인 ${r.discountRate||0}%` : (r.discountType === '과목지원' ? `과목지원 ${r.supportPaidCount||0}/${r.supportFreeCount||0}` : '-');
+    const summary = r.discountType === '%할인' ? `%할인 ${r.discountRate||0}%` : (r.discountType === '과목지원' ? `과목지원 ${r.supportPaidCount||0}/${r.supportFreeCount||0}` : '할인 없음');
     const percentAmt = r.discountType === '%할인' ? computePercentDiscount(Number(r.price||0), Number(r.discountRate||0)) : 0;
-    html += `<dt>할인방식</dt><dd>${r.discountType || '-'}</dd><dt>요약</dt><dd>${summary}</dd><dt>할인율</dt><dd>${r.discountType === '%할인' ? `${r.discountRate||0}%` : '-'}</dd><dt>할인금액</dt><dd>${r.discountType === '%할인' ? format(percentAmt) : '-'}</dd><dt>과목지원</dt><dd>${r.discountType === '과목지원' ? `유료 ${r.supportPaidCount||0} / 무료 ${r.supportFreeCount||0}` : '-'}</dd>`;
+    html += `<dt>할인방식</dt><dd>${r.discountType || '할인 없음'}</dd><dt>요약</dt><dd>${summary}</dd><dt>할인율</dt><dd>${r.discountType === '%할인' ? `${r.discountRate||0}%` : '-'}</dd><dt>할인금액</dt><dd>${r.discountType === '%할인' ? format(percentAmt) : '-'}</dd><dt>과목지원</dt><dd>${r.discountType === '과목지원' ? `유료 ${r.supportPaidCount||0} / 무료 ${r.supportFreeCount||0}` : '-'}</dd>`;
   }else{
-    html += `<dt>특이사항</dt><dd class="col-span-1 whitespace-pre-wrap">${r.memo || '내용 없음'}</dd>`;
+    html += `<dt style="grid-column:1/-1">특이사항</dt><dd style="grid-column:1/-1;white-space:pre-wrap;font-weight:500">${r.memo || '내용 없음'}</dd>`;
   }
   detailContent.innerHTML = html;
   document.getElementById('detailDrawer').classList.add('open');
@@ -648,6 +1424,8 @@ function showMiniDetail(title, index, type){
 function openDetail(index){
   const r = rows[index]; if(!r) return;
   detailTitle.textContent = `${r.student || '상세'} 전체 작성 내용`;
+  const bonusTotal = Number(r.bonusTotal || 0) || (Number(r.ddazuaPrice||0) + Number(r.acpPrice||0));
+  const payable = r.payableAmount != null ? Number(r.payableAmount) : computeAutoPayable(r.price, r.discountType, r.discountRate);
   detailContent.innerHTML = `
     <dt>상담일</dt><dd>${displayDate(r.date)}</dd>
     <dt>납부기한</dt><dd>${displayDate(r.deadline)}</dd>
@@ -656,19 +1434,44 @@ function openDetail(index){
     <dt>과정</dt><dd>${r.course || '-'}</dd>
     <dt>결제권자</dt><dd>${r.payer || '-'}</dd>
     <dt>목적</dt><dd>${r.purpose || '-'}</dd>
+    <dt style="grid-column:1/-1;margin-top:8px;padding-top:8px;border-top:1px solid var(--line-soft)">수강료 (할인 계산)</dt>
     <dt>총금액</dt><dd>${format(r.price)}</dd>
+    <dt>할인방식</dt><dd>${r.discountType || '할인 없음'}</dd>
+    ${r.discountType === '%할인' ? `<dt>할인율</dt><dd>${r.discountRate||0}%</dd>` : ''}
+    ${r.discountType === '과목지원' ? `<dt>과목지원</dt><dd>유료 ${r.supportPaidCount||0} / 무료 ${r.supportFreeCount||0}</dd>` : ''}
+    <dt>납부금액</dt><dd>${format(payable)}${r.payableManual?' <span style="font-size:10px;color:var(--red);font-weight:700">(수동)</span>':''}</dd>
+    <dt>직권할인</dt><dd>${format(r.specialDiscount)}</dd>
+    <dt>실결제금액</dt><dd style="color:var(--blue);font-size:14px">${format(r.finalPrice)}</dd>
+    <dt>매출 (입금)</dt><dd>${format(r.paid)}</dd>
+    <dt>잔액</dt><dd style="color:var(--red);font-size:14px">${format(Math.max(Number(r.finalPrice||0)-Number(r.paid||0),0))}</dd>
+    <dt style="grid-column:1/-1;margin-top:8px;padding-top:8px;border-top:1px solid var(--line-soft)">수강료 외 (매출외수당)</dt>
     <dt>따즈아</dt><dd>${format(r.ddazuaPrice)}</dd>
     <dt>ACP</dt><dd>${format(r.acpPrice)}</dd>
-    <dt>직권할인</dt><dd>${format(r.specialDiscount)}</dd>
-    <dt>할인방식</dt><dd>${r.discountType || '-'}</dd>
-    <dt>할인율</dt><dd>${r.discountType === '%할인' ? `${r.discountRate||0}%` : '-'}</dd>
-    <dt>과목지원</dt><dd>${r.discountType === '과목지원' ? `유료 ${r.supportPaidCount||0} / 무료 ${r.supportFreeCount||0}` : '-'}</dd>
-    <dt>실결제</dt><dd>${format(r.finalPrice)}</dd>
-    <dt>매출</dt><dd>${format(r.paid)}</dd>
-    <dt>잔액</dt><dd>${format(Math.max(Number(r.finalPrice||0)-Number(r.paid||0),0))}</dd>
+    <dt>매출외수당 합계</dt><dd style="color:var(--blue)">${format(bonusTotal)}</dd>
+    <dt style="grid-column:1/-1;margin-top:8px;padding-top:8px;border-top:1px solid var(--line-soft)">결과 · 메모</dt>
     <dt>결과</dt><dd>${r.displayResult}</dd>
-    <dt>특이사항</dt><dd class="col-span-1 whitespace-pre-wrap">${r.memo || '-'}</dd>
+    <dt style="grid-column:1/-1">특이사항</dt>
+    <dd style="grid-column:1 / -1;white-space:pre-wrap;font-weight:500">${r.memo || '-'}</dd>
   `;
+  // 같은 학생의 다른 상담 기록
+  const history = document.getElementById('detailHistory');
+  if(history && r.student){
+    const others = rows.filter(x => x !== r && (x.student||'').trim() === (r.student||'').trim())
+      .sort((a,b)=> isoTime(b.date) - isoTime(a.date));
+    if(others.length){
+      history.innerHTML = `<div style="font-size:11px;color:var(--muted);font-weight:800;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px">같은 학생 이전 기록 (${others.length})</div>
+      ${others.map((o,i) => {
+        const idx = rows.indexOf(o);
+        const rem = Math.max(Number(o.finalPrice||0)-Number(o.paid||0),0);
+        return `<div class="urgent-row" style="cursor:pointer" onclick="openDetail(${idx})">
+          <div><div class="name">${displayDate(o.date)} · <span class="badge badge-${o.displayResult||'미등록'}" style="vertical-align:middle">${o.displayResult||'미등록'}</span></div><div class="sub">${o.mentor||'-'} · ${o.course||'-'}</div></div>
+          <div><div class="amt" style="color:${rem>0?'var(--red)':'var(--muted)'}">${format(rem>0?rem:o.paid)}</div></div>
+        </div>`;
+      }).join('')}`;
+    } else {
+      history.innerHTML = '';
+    }
+  }
   document.getElementById('detailDrawer').classList.add('open');
 }
 function closeDetail(){ document.getElementById('detailDrawer').classList.remove('open'); }
@@ -676,7 +1479,17 @@ function closeDetail(){ document.getElementById('detailDrawer').classList.remove
 function renderAll(){
   renderMonthTabs(); renderResultFilters();
   const filtered = getFilteredRows();
-  renderStats(filtered); renderMentorCards(filtered); renderUrgent(filtered); renderTable(filtered);
+  renderStats(filtered);
+  renderMentorCards(filtered);
+  renderUrgent(filtered);
+  renderCharts(filtered);
+  if(initialLoading && rows.length === 0){
+    renderSkeletonTable();
+  } else {
+    renderTable(filtered);
+  }
+  updateBulkBar();
+  updateTrashBadge();
   document.getElementById('sortDescBtn').classList.toggle('active', currentSort==='desc');
   document.getElementById('sortAscBtn').classList.toggle('active', currentSort==='asc');
 }
@@ -693,7 +1506,13 @@ function addCourse(){ const v = courseAddInput.value.trim(); if(!v) return; if(!
 function renderChoiceButtons(){
   payerWrap.innerHTML = payerOptions.map(v => `<button type="button" class="mini-btn" data-choice="payer">${v}</button>`).join('');
   purposeWrap.innerHTML = purposeOptions.map(v => `<button type="button" class="mini-btn" data-choice="purpose">${v}</button>`).join('');
+  // 총금액 빠른입력
   quickPriceWrap.innerHTML = quickAmounts.map(v => `<button type="button" class="mini-btn" onclick="setPrice(${v})">${format(v)}</button>`).join('');
+  // 따즈아 빠른입력 (신규)
+  const ddzWrap = document.getElementById('ddazuaQuickWrap');
+  if(ddzWrap){
+    ddzWrap.innerHTML = ddazuaQuickAmounts.map(v => `<button type="button" class="mini-btn" onclick="setDdazua(${v})">${format(v)}</button>`).join('');
+  }
   acpPresetWrap.innerHTML = Object.entries(acpMap).map(([k,v]) => `<button type="button" class="mini-btn" onclick="setAcpPreset(${k},${v})">ACP ${k}과목</button>`).join('');
   document.querySelectorAll('[data-choice="payer"]').forEach(btn=> btn.onclick = ()=> selectSingleChoice(btn, 'payerWrap'));
   document.querySelectorAll('[data-choice="purpose"]').forEach(btn=> btn.onclick = ()=> selectSingleChoice(btn, 'purposeWrap'));
@@ -701,53 +1520,99 @@ function renderChoiceButtons(){
 function selectSingleChoice(btn, wrapId){ document.querySelectorAll(`#${wrapId} .mini-btn`).forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
 function getSelectedChoice(wrapId){ const btn = document.querySelector(`#${wrapId} .mini-btn.active`); return btn ? btn.textContent.trim() : ''; }
 function setSelectedChoice(wrapId, value){ document.querySelectorAll(`#${wrapId} .mini-btn`).forEach(btn=> btn.classList.toggle('active', btn.textContent.trim()===value)); }
-function setPrice(v){ price.value = format(v); updatePaymentPreview(); }
+function setPrice(v){
+  price.value = format(v);
+  document.querySelectorAll('#quickPriceWrap .mini-btn').forEach(btn => btn.classList.toggle('active', num(btn.textContent)===v));
+  updatePaymentPreview();
+}
+function setDdazua(v){
+  document.getElementById('ddazuaPrice').value = format(v);
+  document.querySelectorAll('#ddazuaQuickWrap .mini-btn').forEach(btn => btn.classList.toggle('active', num(btn.textContent)===v));
+  updatePaymentPreview();
+}
 function setAcpPreset(courseCount, amount){ acpPrice.value = format(amount); updatePaymentPreview(); document.querySelectorAll('#acpPresetWrap .mini-btn').forEach(btn => btn.classList.toggle('active', btn.textContent.includes(`${courseCount}과목`))); }
 
-function setDiscountType(type){ currentDiscountType = currentDiscountType === type ? '' : type; supportBtn.classList.toggle('active', currentDiscountType==='과목지원'); percentBtn.classList.toggle('active', currentDiscountType==='%할인'); renderDiscountPane(); updatePaymentPreview(); }
+function setDiscountType(type){
+  currentDiscountType = type || '';
+  document.getElementById('supportBtn').classList.toggle('active', currentDiscountType==='과목지원');
+  document.getElementById('percentBtn').classList.toggle('active', currentDiscountType==='%할인');
+  document.getElementById('noDiscountBtn').classList.toggle('active', currentDiscountType==='');
+  // 할인방식 바꾸면 납부금액 자동 모드로 복귀
+  resetPayableAuto();
+  renderDiscountPane();
+  updatePaymentPreview();
+}
+
 function renderDiscountPane(){
+  const pane = document.getElementById('discountPane');
+  if(!pane) return;
   if(currentDiscountType === '과목지원'){
-    discountPane.innerHTML = `
-      <div><label class="block text-xs text-slate-500 mb-1">유료과목 수</label><input id="supportPaidCount" class="input" type="number" min="0" value="${document.getElementById('supportPaidCount')?.value || 0}" oninput="updatePaymentPreview()" /></div>
-      <div><label class="block text-xs text-slate-500 mb-1">무료과목 수</label><input id="supportFreeCount" class="input" type="number" min="0" value="${document.getElementById('supportFreeCount')?.value || 0}" oninput="updatePaymentPreview()" /></div>
-      <div class="md:col-span-2 rounded-2xl border border-dashed border-slate-200 px-4 py-3 text-sm text-slate-500">과목지원은 과목 수로만 기록됩니다.</div>`;
+    pane.innerHTML = `
+      <div class="grid-2">
+        <div class="field"><label>유료과목 수</label><input id="supportPaidCount" class="input" type="number" min="0" value="${document.getElementById('supportPaidCount')?.value || 0}" oninput="updatePaymentPreview()" /></div>
+        <div class="field"><label>무료과목 수</label><input id="supportFreeCount" class="input" type="number" min="0" value="${document.getElementById('supportFreeCount')?.value || 0}" oninput="updatePaymentPreview()" /></div>
+      </div>
+      <div class="field-hint" style="margin-top:8px">과목지원은 과목 수로만 기록됩니다. 납부금액은 <b>총금액 그대로</b>예요.</div>`;
   } else if(currentDiscountType === '%할인'){
     const rate = Number(document.getElementById('discountRate')?.value || 0);
-    const amount = computePercentDiscount(num(price.value), rate);
-    discountPane.innerHTML = `
-      <div><label class="block text-xs text-slate-500 mb-1">할인율</label><div class="relative"><input id="discountRate" class="input pr-9" type="number" min="0" max="100" value="${rate || ''}" oninput="updatePaymentPreview()" /><span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">%</span></div></div>
-      <div><label class="block text-xs text-slate-500 mb-1">할인금액</label><input class="input bg-slate-50" readonly value="${format(amount)}" /></div>`;
+    const price = num(document.getElementById('price')?.value || 0);
+    const discAmt = computePercentDiscount(price, rate);
+    pane.innerHTML = `
+      <div class="grid-2">
+        <div class="field"><label>할인율 (%)</label><input id="discountRate" class="input" type="number" min="0" max="100" step="0.1" value="${rate || ''}" oninput="resetPayableAuto(); updatePaymentPreview()" /></div>
+        <div class="field"><label>할인금액 (자동)</label><input class="input" style="background:var(--surface-2)" readonly value="${discAmt ? format(discAmt) : ''}" /></div>
+      </div>
+      <div class="field-hint" style="margin-top:8px">납부금액 = 총금액 − ${format(discAmt||0)}</div>`;
   } else {
-    discountPane.innerHTML = `<div class="md:col-span-2 rounded-2xl border border-dashed border-slate-200 px-4 py-3 text-sm text-slate-500">할인 방식을 선택하세요.</div>`;
+    pane.innerHTML = `<div class="field-hint" style="padding:6px 2px">할인 없음. 납부금액은 총금액과 동일해요.</div>`;
   }
 }
 
 function resetForm(){
-  ['date','deadline','student','mentor','price','ddazuaPrice','acpPrice','specialDiscount','finalPrice','paid','remain','memo'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
-  date.value = todayStr(); deadline.value = todayStr(); result.value = 'auto'; selectedCourseValue=''; currentDiscountType='';
+  ['date','deadline','student','mentor','price','ddazuaPrice','acpPrice','specialDiscount','finalPrice','paid','remain','memo','payableAmount'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  date.value = todayStr(); deadline.value = todayStr(); result.value = 'auto'; selectedCourseValue='';
+  currentDiscountType='';
+  payableManual = false;
+  const aux = document.getElementById('payableAuto');
+  if(aux){ aux.textContent='자동'; aux.classList.remove('manual'); }
   setSelectedChoice('payerWrap','본인'); setSelectedChoice('purposeWrap','취업');
   document.querySelectorAll('#acpPresetWrap .mini-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#ddazuaQuickWrap .mini-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#quickPriceWrap .mini-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('supportBtn').classList.remove('active');
+  document.getElementById('percentBtn').classList.remove('active');
+  document.getElementById('noDiscountBtn').classList.add('active');
   renderCourseButtons(); renderDiscountPane(); updatePaymentPreview();
 }
 function openModal(){ resetForm(); editIndex = null; modalTitle.innerText='상담 입력'; saveButton.innerText='저장하기'; modal.classList.add('flex'); }
 function closeModal(){ modal.classList.remove('flex'); }
 
 function buildRowFromForm(){
+  const priceVal = num(price.value);
+  const rate = Number(document.getElementById('discountRate')?.value || 0);
+  const autoPayable = computeAutoPayable(priceVal, currentDiscountType, rate);
+  const payableAmount = payableManual ? num(document.getElementById('payableAmount').value) : autoPayable;
+  const ddz = num(ddazuaPrice.value);
+  const acp = num(acpPrice.value);
+
   const obj = {
     date: date.value,
     deadline: deadline.value,
     student: student.value.trim(),
     mentor: mentor.value.trim(),
     course: selectedCourseValue,
-    price: num(price.value),
-    ddazuaPrice: num(ddazuaPrice.value),
-    acpPrice: num(acpPrice.value),
+    price: priceVal,
+    ddazuaPrice: ddz,
+    acpPrice: acp,
+    bonusTotal: ddz + acp,              // 매출외수당 = 따즈아 + ACP
+    payableAmount: payableAmount,       // 납부금액
+    payableManual: payableManual,       // 수동 여부 기록
     specialDiscount: num(specialDiscount.value),
     discountType: currentDiscountType,
-    discountRate: Number(document.getElementById('discountRate')?.value || 0),
+    discountRate: rate,
     supportPaidCount: Number(document.getElementById('supportPaidCount')?.value || 0),
     supportFreeCount: Number(document.getElementById('supportFreeCount')?.value || 0),
-    finalPrice: computeFinalPrice(),
+    finalPrice: Math.max(payableAmount - num(specialDiscount.value), 0),  // 실결제 = 납부 - 직권할인
     paid: num(paid.value),
     payer: getSelectedChoice('payerWrap'),
     purpose: getSelectedChoice('purposeWrap'),
@@ -772,7 +1637,7 @@ function makeLocalId(){
 }
 
 function toServerRow(obj){
-  // Apps Script가 기대하는 필드명과 동일한 구조 (buildStoredRow_가 읽는 키)
+  // Apps Script가 기대하는 필드명과 동일한 구조
   return {
     id: obj.id || '',
     date: obj.date,
@@ -783,6 +1648,9 @@ function toServerRow(obj){
     price: obj.price,
     ddazuaPrice: obj.ddazuaPrice,
     acpPrice: obj.acpPrice,
+    bonusTotal: obj.bonusTotal,          // 신규: 매출외수당 (따즈아+ACP)
+    payableAmount: obj.payableAmount,    // 신규: 납부금액
+    payableManual: obj.payableManual,    // 신규: 수동입력 여부
     specialDiscount: obj.specialDiscount,
     discountType: obj.discountType,
     discountRate: obj.discountRate,
@@ -806,71 +1674,123 @@ function setSyncIndicator(state, text){
   el.classList.toggle('hidden', !text);
 }
 
+// ─────────────────────────────────────────
+// Firestore API 레이어
+// ─────────────────────────────────────────
+const CONSULTS_PATH = ['consults']; // /consults/{id}
+
+function fbCollection(){
+  const fb = window.__fb;
+  return fb.collection(fb.db, ...CONSULTS_PATH);
+}
+function fbDocRef(id){
+  const fb = window.__fb;
+  return fb.doc(fb.db, ...CONSULTS_PATH, id);
+}
+
 async function apiCall(action, payload){
-  // GET for list (캐시 활용 가능), POST for create/update/delete
   pendingOps++;
-  setSyncIndicator('syncing', '동기화 중...');
+  setSyncIndicator('syncing', '저장 중...');
   try{
-    let resp;
+    const fb = window.__fb;
     if(action === 'list'){
-      resp = await fetch(`${API_URL}?action=list&_=${Date.now()}`, { method:'GET' });
-    }else{
-      resp = await fetch(API_URL, {
-        method:'POST',
-        redirect:'follow',
-        headers:{'Content-Type':'text/plain;charset=utf-8'},  // simple request → preflight 회피
-        body: JSON.stringify({ action, ...payload })
-      });
+      // 일회성 list는 실시간 리스너가 대체. 필요하면 getDocs로 폴백
+      const snap = await fb.getDocs(fb.query(fbCollection(), fb.orderBy('date','desc')));
+      const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      return { ok:true, rows };
     }
-    const text = await resp.text();
-    let data;
-    try{ data = JSON.parse(text); }catch(e){ throw new Error('서버 응답 파싱 실패: ' + text.slice(0,120)); }
-    if(!data.ok) throw new Error(data.error || '서버 오류');
-    return data;
+    if(action === 'create'){
+      const row = payload.row || {};
+      delete row.id;
+      row.createdAt = fb.serverTimestamp();
+      row.updatedAt = fb.serverTimestamp();
+      row.updatedBy = currentUserEmail || null;
+      const ref = await fb.addDoc(fbCollection(), row);
+      return { ok:true, id: ref.id };
+    }
+    if(action === 'update'){
+      const row = payload.row || {};
+      const id = payload.id;
+      if(!id) throw new Error('update: id 없음');
+      delete row.id;
+      row.updatedAt = fb.serverTimestamp();
+      row.updatedBy = currentUserEmail || null;
+      await fb.updateDoc(fbDocRef(id), row);
+      return { ok:true, id };
+    }
+    if(action === 'delete'){
+      const id = payload.id;
+      if(!id) throw new Error('delete: id 없음');
+      await fb.deleteDoc(fbDocRef(id));
+      return { ok:true };
+    }
+    throw new Error('알 수 없는 action: ' + action);
   }finally{
     pendingOps--;
     if(pendingOps === 0) setSyncIndicator('idle', '');
   }
 }
 
-// 서버에서 최신 목록 받아서 rows 덮어쓰기
-async function syncFromServer({silent=false}={}){
-  if(syncing) return;
-  syncing = true;
-  try{
-    const data = await apiCall('list', {});
-    rows = Array.isArray(data.rows) ? data.rows : [];
+// 실시간 리스너 - 다른 사용자 변경 즉시 반영
+let unsubscribeRows = null;
+function startRealtimeSync(){
+  if(unsubscribeRows) unsubscribeRows();
+  const fb = window.__fb;
+  const q = fb.query(fbCollection(), fb.orderBy('date', 'desc'));
+  setSyncIndicator('syncing', '실시간 연결 중...');
+  unsubscribeRows = fb.onSnapshot(q, snap => {
+    rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    migrateLegacyRows();
     lastSyncAt = Date.now();
     localStorage.setItem(LAST_SYNC_KEY, String(lastSyncAt));
     saveLocal();
+    initialLoading = false;
     renderAll();
-  }catch(err){
-    console.error('서버 동기화 실패', err);
-    if(!silent){
-      setSyncIndicator('error', '오프라인 모드');
-      setTimeout(()=>setSyncIndicator('idle',''), 2500);
-    }
-  }finally{
-    syncing = false;
-  }
+    setSyncIndicator('idle', '');
+  }, err => {
+    console.error('Firestore 리스너 에러', err);
+    setSyncIndicator('error', '실시간 연결 실패');
+    initialLoading = false;
+    renderAll();
+    toast('Firestore 연결 실패: ' + err.message, {type:'error', duration:6000});
+    setTimeout(()=>setSyncIndicator('idle',''), 3000);
+  });
 }
+function stopRealtimeSync(){
+  if(unsubscribeRows){ unsubscribeRows(); unsubscribeRows = null; }
+}
+
+// 수동 새로고침은 이제 필요 없지만 UI 호환을 위해 유지
+async function syncFromServer({silent=false}={}){
+  // 실시간 리스너가 항상 최신 상태를 유지함
+  if(!silent) toast('실시간으로 동기화 중입니다', {type:'info', duration:1500});
+}
+function manualRefresh(){ syncFromServer({silent:false}); }
 
 async function saveData(){
   const obj = buildRowFromForm();
   const isEdit = editIndex !== null;
+
+  // 중복 학생명 경고 (신규 저장 시만)
+  if(!isEdit && obj.student){
+    const dupes = rows.filter(r => (r.student||'').trim() === obj.student.trim());
+    if(dupes.length){
+      const cont = confirm(`"${obj.student}" 학생의 이전 상담 기록이 ${dupes.length}건 있습니다.\n\n그래도 새 기록으로 저장할까요?\n(취소하면 저장되지 않습니다)`);
+      if(!cont) return;
+    }
+  }
+
   const prevSnapshot = isEdit ? JSON.parse(JSON.stringify(rows[editIndex])) : null;
 
   if(isEdit){
-    // 기존 id 유지
-    obj.id = rows[editIndex].id || rows[editIndex]._id || '';
+    obj.id = rows[editIndex].id || '';
     rows[editIndex] = obj;
   }else{
-    obj.id = makeLocalId();  // 임시 id, 서버 응답 오면 교체
+    obj.id = makeLocalId();
     rows.push(obj);
   }
   saveLocal(); renderAll(); closeModal();
 
-  // 백그라운드 서버 반영
   try{
     const action = isEdit ? 'update' : 'create';
     const payload = isEdit
@@ -878,7 +1798,6 @@ async function saveData(){
       : { row: toServerRow(obj) };
     const result = await apiCall(action, payload);
 
-    // 서버 id로 교체 (임시 id였다면)
     if(result && result.id){
       const idx = rows.findIndex(r => r.id === obj.id);
       if(idx !== -1){
@@ -886,9 +1805,9 @@ async function saveData(){
         saveLocal();
       }
     }
+    toast(isEdit ? '수정 저장했습니다' : '새 상담을 저장했습니다', {type:'success', duration:2000});
   }catch(err){
     console.error('저장 반영 실패', err);
-    // 롤백
     if(isEdit && prevSnapshot){
       rows[editIndex] = prevSnapshot;
     }else{
@@ -896,7 +1815,7 @@ async function saveData(){
       if(idx !== -1) rows.splice(idx, 1);
     }
     saveLocal(); renderAll();
-    alert('시트 저장에 실패했습니다.\n' + (err.message || err) + '\n\n다시 시도해주세요.');
+    toast('시트 저장 실패: ' + (err.message || err), {type:'error', duration:6000});
   }
 }
 
@@ -905,34 +1824,69 @@ function editRow(index){
   editIndex = index; modalTitle.innerText='상담 수정'; saveButton.innerText='수정 저장'; modal.classList.add('flex');
   date.value = r.date || todayStr(); deadline.value = r.deadline || todayStr(); student.value = r.student || ''; mentor.value = r.mentor || ''; selectedCourseValue = r.course || '';
   price.value = r.price ? format(r.price) : ''; ddazuaPrice.value = r.ddazuaPrice ? format(r.ddazuaPrice) : ''; acpPrice.value = r.acpPrice ? format(r.acpPrice) : ''; specialDiscount.value = r.specialDiscount ? format(r.specialDiscount) : '';
-  paid.value = r.paid ? format(r.paid) : ''; memo.value = r.memo || ''; result.value = r.result || 'auto'; currentDiscountType = r.discountType || '';
+  paid.value = r.paid ? format(r.paid) : ''; memo.value = r.memo || ''; result.value = r.result || 'auto';
+  currentDiscountType = r.discountType || '';
+  // 할인방식 토글 버튼 상태 동기화
+  document.getElementById('supportBtn').classList.toggle('active', currentDiscountType==='과목지원');
+  document.getElementById('percentBtn').classList.toggle('active', currentDiscountType==='%할인');
+  document.getElementById('noDiscountBtn').classList.toggle('active', currentDiscountType==='');
   renderCourseButtons(); renderDiscountPane();
-  if(currentDiscountType === '%할인'){ document.getElementById('discountRate').value = r.discountRate || ''; }
-  if(currentDiscountType === '과목지원'){ document.getElementById('supportPaidCount').value = r.supportPaidCount || 0; document.getElementById('supportFreeCount').value = r.supportFreeCount || 0; }
+  if(currentDiscountType === '%할인'){ const dr = document.getElementById('discountRate'); if(dr) dr.value = r.discountRate || ''; }
+  if(currentDiscountType === '과목지원'){
+    const sp = document.getElementById('supportPaidCount'); if(sp) sp.value = r.supportPaidCount || 0;
+    const sf = document.getElementById('supportFreeCount'); if(sf) sf.value = r.supportFreeCount || 0;
+  }
+  // 납부금액 복원: 수동이었다면 저장된 값 그대로, 아니면 자동 계산
+  payableManual = !!r.payableManual;
+  const aux = document.getElementById('payableAuto');
+  if(payableManual && r.payableAmount != null){
+    document.getElementById('payableAmount').value = format(r.payableAmount);
+    if(aux){ aux.textContent='수동'; aux.classList.add('manual'); }
+  } else {
+    if(aux){ aux.textContent='자동'; aux.classList.remove('manual'); }
+  }
   setSelectedChoice('payerWrap', r.payer || '본인'); setSelectedChoice('purposeWrap', r.purpose || '취업');
   updatePaymentPreview();
 }
 async function deleteRow(index){
-  if(!confirm('이 상담 기록을 삭제할까요?')) return;
   const victim = rows[index];
   if(!victim) return;
+  if(!confirm(`"${victim.student||'이 기록'}"을 삭제할까요? (휴지통으로 이동 · 30일 내 복원 가능)`)) return;
   const snapshot = JSON.parse(JSON.stringify(victim));
   const victimId = victim.id;
-
+  // 휴지통에 이동
+  const trashId = 'tr-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  trash.push({ trashId, row:snapshot, deletedAt:Date.now() });
+  saveTrash(); updateTrashBadge();
   rows.splice(index,1);
   saveLocal(); renderAll();
 
+  toast(`"${snapshot.student||'기록'}"을 삭제했습니다`, {
+    type:'success',
+    action: {
+      label:'실행 취소',
+      onClick: async ()=>{
+        trash = trash.filter(t => t.trashId !== trashId);
+        saveTrash(); updateTrashBadge();
+        rows.splice(index, 0, snapshot);
+        saveLocal(); renderAll();
+        if(victimId && !String(victimId).startsWith('local-')){
+          // 서버에서 이미 지워졌다면 새로 create
+          try{ await apiCall('create', { row: toServerRow(snapshot) }); }catch(e){}
+        }
+      }
+    },
+    duration: 6000
+  });
+
   if(!victimId || String(victimId).startsWith('local-')){
-    // 서버에 올라간 적 없는 항목이면 로컬 삭제로 충분
     return;
   }
   try{
     await apiCall('delete', { id: victimId });
   }catch(err){
     console.error('삭제 반영 실패', err);
-    rows.splice(index, 0, snapshot);
-    saveLocal(); renderAll();
-    alert('시트 삭제에 실패했습니다.\n' + (err.message || err));
+    toast('시트 삭제에 실패했습니다: ' + (err.message||err), {type:'error'});
   }
 }
 
@@ -950,11 +1904,12 @@ async function quickEditAmount(index, type){
   if(!r.id || String(r.id).startsWith('local-')) return;
   try{
     await apiCall('update', { id: r.id, row: toServerRow(r) });
+    toast('수정했습니다', {type:'success', duration:1500});
   }catch(err){
     console.error('금액 수정 반영 실패', err);
     rows[index] = snapshot;
     saveLocal(); renderAll();
-    alert('시트 수정에 실패했습니다.\n' + (err.message || err));
+    toast('수정 실패: ' + (err.message||err), {type:'error'});
   }
 }
 
@@ -964,27 +1919,184 @@ document.addEventListener('keydown', (e)=>{
 });
 
 // ─────────────────────────────────────────
-// 부팅
+// 일회성 마이그레이션: 로컬 스토리지 또는 구글 시트의 기존 데이터 → Firestore
+// 콘솔에서 migrateToFirestore() 실행
 // ─────────────────────────────────────────
-renderChoiceButtons();
-loadLocal();
-lastSyncAt = Number(localStorage.getItem(LAST_SYNC_KEY) || 0);
-renderCourseButtons();
-renderDiscountPane();
-renderAll();
-
-// 로컬 데이터로 일단 화면 채운 뒤, 백그라운드에서 시트 동기화
-syncFromServer({ silent: false });
-
-// 다른 탭/기기에서 수정한 것 반영: 탭이 다시 활성화될 때 일정 시간 지났으면 refresh
-document.addEventListener('visibilitychange', ()=>{
-  if(document.visibilityState === 'visible' && (Date.now() - lastSyncAt) > REFRESH_IF_OLDER_MS){
-    syncFromServer({ silent: true });
+window.migrateToFirestore = async function(sourceRows){
+  // sourceRows 없으면 현재 rows를 사용 (시트에서 마지막으로 받아온 것)
+  const fb = window.__fb;
+  if(!fb){ console.error('Firebase 미초기화'); return; }
+  const src = sourceRows || rows;
+  if(!Array.isArray(src) || src.length === 0){
+    console.warn('이전할 데이터가 없습니다');
+    return;
   }
-});
+  if(!confirm(`${src.length}건을 Firestore로 이전할까요?\n(기존 Firestore 데이터는 유지됨 — 중복 주의)`)) return;
 
-// 수동 새로고침 버튼 지원
-window.manualRefresh = ()=> syncFromServer({ silent: false });
+  const batch = fb.writeBatch(fb.db);
+  let count = 0;
+  for(const r of src){
+    const cleaned = { ...r };
+    delete cleaned.id; // Firestore가 새 id 발급
+    cleaned.createdAt = fb.serverTimestamp();
+    cleaned.updatedAt = fb.serverTimestamp();
+    cleaned.updatedBy = currentUserEmail || 'migration';
+    cleaned.migratedFromSheet = true;
+    const ref = fb.doc(fbCollection());
+    batch.set(ref, cleaned);
+    count++;
+    if(count % 400 === 0){
+      await batch.commit();
+      console.log(`[마이그레이션] ${count}건 커밋됨`);
+    }
+  }
+  await batch.commit();
+  console.log(`✅ 마이그레이션 완료: ${count}건`);
+  toast(`${count}건을 Firestore로 이전했습니다`, {type:'success', duration:4000});
+};
+let currentUserEmail = null;
+let authInitialized = false;
+
+function showAuthError(msg){
+  const err = document.getElementById('authError');
+  if(err){ err.textContent = msg; err.classList.add('show'); }
+  const loading = document.getElementById('authLoading');
+  if(loading) loading.classList.remove('show');
+}
+function hideAuthError(){
+  const err = document.getElementById('authError');
+  if(err) err.classList.remove('show');
+}
+
+async function loginWithGoogle(){
+  const fb = window.__fb;
+  if(!fb){ showAuthError('Firebase가 아직 로드되지 않았습니다. 잠시 후 다시 시도해주세요.'); return; }
+  hideAuthError();
+  const loading = document.getElementById('authLoading');
+  if(loading) loading.classList.add('show');
+  try{
+    await fb.signInWithPopup(fb.auth, fb.provider);
+  }catch(err){
+    console.error('로그인 실패', err);
+    const msg = err.code === 'auth/popup-closed-by-user'
+      ? '로그인 창이 닫혔어요. 다시 시도해주세요.'
+      : (err.code === 'auth/popup-blocked'
+        ? '팝업이 차단되어 있어요. 브라우저 설정에서 팝업을 허용해주세요.'
+        : '로그인 실패: ' + (err.message||err.code||''));
+    showAuthError(msg);
+  }
+}
+
+function toggleEmailLogin(){
+  const form = document.getElementById('emailLoginForm');
+  const arrow = document.getElementById('emailLoginArrow');
+  const label = document.getElementById('emailLoginLabel');
+  if(!form) return;
+  const isOpen = form.classList.toggle('show');
+  if(arrow) arrow.textContent = isOpen ? '▴' : '▾';
+  if(label) label.textContent = isOpen ? '이메일·비밀번호 로그인' : '이메일·비밀번호로 로그인';
+  if(isOpen){
+    hideAuthError();
+    setTimeout(()=> document.getElementById('loginEmail')?.focus(), 50);
+  }
+}
+
+async function loginWithEmail(e){
+  if(e) e.preventDefault();
+  const fb = window.__fb;
+  if(!fb){ showAuthError('Firebase가 아직 로드되지 않았습니다.'); return false; }
+  const email = document.getElementById('loginEmail')?.value.trim();
+  const pass = document.getElementById('loginPassword')?.value;
+  if(!email || !pass){ showAuthError('이메일과 비밀번호를 모두 입력해주세요.'); return false; }
+  hideAuthError();
+  const loading = document.getElementById('authLoading');
+  if(loading) loading.classList.add('show');
+  try{
+    await fb.signInWithEmailAndPassword(fb.auth, email, pass);
+  }catch(err){
+    console.error('이메일 로그인 실패', err);
+    const codeMap = {
+      'auth/invalid-email': '이메일 형식이 올바르지 않습니다.',
+      'auth/user-not-found': '등록되지 않은 이메일입니다. 관리자에게 문의하세요.',
+      'auth/wrong-password': '비밀번호가 맞지 않습니다.',
+      'auth/invalid-credential': '이메일 또는 비밀번호가 맞지 않습니다.',
+      'auth/too-many-requests': '너무 많이 시도하셨어요. 잠시 후 다시 시도해주세요.',
+      'auth/user-disabled': '비활성화된 계정입니다. 관리자에게 문의하세요.'
+    };
+    showAuthError(codeMap[err.code] || ('로그인 실패: ' + (err.message||err.code||'')));
+  }
+  return false;
+}
+
+async function logout(){
+  if(!confirm('로그아웃 하시겠어요?')) return;
+  const fb = window.__fb;
+  stopRealtimeSync();
+  try{ await fb.signOut(fb.auth); }catch(e){ console.error(e); }
+  location.reload();
+}
+
+function onUserSignedIn(user){
+  currentUserEmail = user.email || null;
+  // 오버레이 숨기고 앱 본체 표시
+  document.getElementById('authOverlay').style.display = 'none';
+  document.getElementById('appRoot').style.display = '';
+  // 사용자 칩 표시
+  const chip = document.getElementById('userChip');
+  if(chip){
+    const photoHtml = user.photoURL ? `<img src="${user.photoURL}" alt="" referrerpolicy="no-referrer">` : '<span class="brand-mark" style="width:22px;height:22px;font-size:10px">U</span>';
+    chip.innerHTML = `${photoHtml}<span class="mail">${user.email || '사용자'}</span>`;
+  }
+  // 최초 1회만 앱 초기화
+  if(!authInitialized){
+    authInitialized = true;
+    bootApp();
+  }
+}
+
+function onUserSignedOut(){
+  currentUserEmail = null;
+  stopRealtimeSync();
+  document.getElementById('authOverlay').style.display = 'flex';
+  document.getElementById('appRoot').style.display = 'none';
+}
+
+function setupAuthListener(){
+  const fb = window.__fb;
+  if(!fb){ console.warn('Firebase 미로드'); return; }
+  fb.onAuthStateChanged(fb.auth, user => {
+    const loading = document.getElementById('authLoading');
+    if(loading) loading.classList.remove('show');
+    if(user){
+      onUserSignedIn(user);
+    }else{
+      onUserSignedOut();
+    }
+  });
+}
+
+// Firebase SDK가 준비되면 호출됨
+window.onFirebaseReady = function(){
+  setupAuthListener();
+};
+// 이미 준비됐으면 바로 실행
+if(window.__fbReady){ setupAuthListener(); }
+
+// ─────────────────────────────────────────
+// 앱 본체 부팅 (로그인 성공 후 1회)
+// ─────────────────────────────────────────
+function bootApp(){
+  renderChoiceButtons();
+  loadLocal();
+  loadTrash();
+  lastSyncAt = Number(localStorage.getItem(LAST_SYNC_KEY) || 0);
+  renderCourseButtons();
+  renderTuitionPane();
+  renderDiscountPane();
+  renderAll();
+  // 실시간 리스너 시작
+  startRealtimeSync();
+}
 </script>
 </body>
 </html>
