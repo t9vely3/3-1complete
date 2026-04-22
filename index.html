@@ -243,23 +243,32 @@
             self._rebuildFileUrlIndex();
             firstLoad = false;
             self._initialized = true;
-            // 1회 정리: 기존 base64 썸네일이 있으면 제거 후 재저장 (1MB 제한 해소)
-            var needsCleanup = false;
-            if (incoming.sectionData) {
-              Object.keys(incoming.sectionData).forEach(function(k) {
-                (incoming.sectionData[k].items || []).forEach(function(item) {
-                  (item.files || []).forEach(function(f) {
-                    if (f.thumbnailUrl && f.thumbnailUrl.indexOf('data:') === 0) needsCleanup = true;
+            // pages 무거운 데이터 로드
+            var pageLoadPromises = (incoming.pages || []).map(function(page) {
+              return fbDb.collection('app').doc('page_' + page.id).get().then(function(snap) {
+                if (snap.exists) { var h = snap.data(); page.items = h.items || []; page.contentBlocks = h.contentBlocks || []; page.tabFields = h.tabFields || {}; }
+                else { page.items = page.items || []; page.contentBlocks = page.contentBlocks || []; page.tabFields = page.tabFields || {}; }
+              }).catch(function() { page.items = page.items || []; page.contentBlocks = page.contentBlocks || []; page.tabFields = page.tabFields || {}; });
+            });
+            Promise.all(pageLoadPromises).then(function() {
+              // 1회 정리: 기존 base64 썸네일이 있으면 제거 후 재저장 (1MB 제한 해소)
+              var needsCleanup = false;
+              if (incoming.sectionData) {
+                Object.keys(incoming.sectionData).forEach(function(k) {
+                  (incoming.sectionData[k].items || []).forEach(function(item) {
+                    (item.files || []).forEach(function(f) {
+                      if (f.thumbnailUrl && f.thumbnailUrl.indexOf('data:') === 0) needsCleanup = true;
+                    });
                   });
                 });
-              });
-            }
-            if (needsCleanup) {
-              console.log('[정리] base64 썸네일 제거 후 재저장 중...');
-              self._lastWrittenJson = '';  // 강제 재저장
-              self._persist().then(function() { console.log('[정리] 완료! 문서 크기 감소됨'); }).catch(function(e) { console.warn('[정리] 실패:', e); });
-            }
-            resolve(self._cache);
+              }
+              if (needsCleanup) {
+                console.log('[정리] base64 썸네일 제거 후 재저장 중...');
+                self._lastWrittenJson = '';
+                self._persist().then(function() { console.log('[정리] 완료!'); }).catch(function(e) { console.warn('[정리] 실패:', e); });
+              }
+              resolve(self._cache);
+            });
             return;
           }
 
@@ -268,11 +277,24 @@
           if (incomingJson === self._lastWrittenJson) return;
 
           // 다른 사용자의 변경사항 → 캐시 업데이트 + 콜백
-          self._cache = incoming;
-          self._lastWrittenJson = incomingJson;
-          self._rebuildFileUrlIndex();
-          showSyncIndicator();
-          self._remoteCallbacks.forEach(function(cb) { try { cb(incoming); } catch(e) { console.error(e); } });
+          // pages의 무거운 데이터를 별도 문서에서 로드
+          var hydrateAndNotify = function() {
+            var loadPromises = (incoming.pages || []).map(function(page) {
+              if (page.items && page.items.length > 0) return Promise.resolve();
+              return fbDb.collection('app').doc('page_' + page.id).get().then(function(snap) {
+                if (snap.exists) { var h = snap.data(); page.items = h.items || []; page.contentBlocks = h.contentBlocks || []; page.tabFields = h.tabFields || {}; }
+                else { page.items = page.items || []; page.contentBlocks = page.contentBlocks || []; page.tabFields = page.tabFields || {}; }
+              }).catch(function() { page.items = page.items || []; page.contentBlocks = page.contentBlocks || []; page.tabFields = page.tabFields || {}; });
+            });
+            Promise.all(loadPromises).then(function() {
+              self._cache = incoming;
+              self._lastWrittenJson = incomingJson;
+              self._rebuildFileUrlIndex();
+              showSyncIndicator();
+              self._remoteCallbacks.forEach(function(cb) { try { cb(incoming); } catch(e) { console.error(e); } });
+            });
+          };
+          hydrateAndNotify();
         }, function(err) {
           console.error('Firestore 구독 오류:', err);
           if (firstLoad) reject(err);
@@ -281,28 +303,62 @@
     },
 
     _persist: function() {
-      // Firestore 1MB 문서 제한 대응: base64 썸네일을 제거한 경량 버전 저장
-      // 메모리 캐시에는 그대로 유지 (현재 세션 표시용)
+      // Firestore 1MB 문서 제한 대응:
+      // 1) base64 썸네일 제거
+      // 2) pages의 items/contentBlocks를 별도 문서(app/pages/{pageId})로 분리
+      var self = this;
       var stripped = JSON.parse(JSON.stringify(this._cache));
+
+      // base64 썸네일 제거 (sectionData - 레거시)
       if (stripped.sectionData) {
         Object.keys(stripped.sectionData).forEach(function(k) {
           (stripped.sectionData[k].items || []).forEach(function(item) {
             (item.files || []).forEach(function(f) {
-              // base64 데이터는 제거 (directUrl로 대체 표시)
-              if (f.thumbnailUrl && f.thumbnailUrl.indexOf('data:') === 0) {
-                delete f.thumbnailUrl;
-              }
+              if (f.thumbnailUrl && f.thumbnailUrl.indexOf('data:') === 0) delete f.thumbnailUrl;
             });
           });
         });
       }
+
+      // pages 분리: main 문서에는 메타만, 무거운 데이터는 별도 문서
+      var pageDataPromises = [];
+      var lightPages = [];
+      if (stripped.pages) {
+        stripped.pages.forEach(function(page) {
+          // 무거운 데이터 추출
+          var heavy = { items: page.items || [], contentBlocks: page.contentBlocks || [], tabFields: page.tabFields || {} };
+          // items 안의 base64 썸네일도 제거
+          heavy.items.forEach(function(item) {
+            (item.files || []).forEach(function(f) {
+              if (f.thumbnailUrl && f.thumbnailUrl.indexOf('data:') === 0) delete f.thumbnailUrl;
+            });
+          });
+          // 별도 문서에 저장
+          var pageDocRef = fbDb.collection('app').doc('page_' + page.id);
+          pageDataPromises.push(pageDocRef.set(heavy).catch(function(err) {
+            console.warn('페이지 데이터 저장 실패:', page.id, err);
+          }));
+          // main 문서에는 가벼운 메타만
+          lightPages.push({
+            id: page.id, name: page.name, icon: page.icon, color: page.color,
+            parentId: page.parentId, order: page.order, desc: page.desc,
+            coverImage: page.coverImage, tabs: page.tabs,
+            _itemCount: (page.items || []).length // 참고용 개수만
+          });
+        });
+      }
+      stripped.pages = lightPages;
+
       var json = JSON.stringify(stripped);
-      if (json === this._lastWrittenJson) return Promise.resolve();
+      if (json === this._lastWrittenJson && pageDataPromises.length === 0) return Promise.resolve();
       this._lastWrittenJson = json;
-      return DOC_REF.set(stripped).catch(function(err) {
-        console.error('저장 실패:', err);
-        throw err;
-      });
+
+      return Promise.all([
+        DOC_REF.set(stripped).catch(function(err) {
+          console.error('메인 문서 저장 실패:', err);
+          throw err;
+        })
+      ].concat(pageDataPromises));
     },
 
     // 파일 URL 인덱스 재구축 (데이터 로드 시)
@@ -332,7 +388,39 @@
 
     // ============ 데이터 API (기존 인터페이스 유지) ============
     getAllData: function() {
-      return this._ensure().then(function(d) { return JSON.parse(JSON.stringify(d)); });
+      var self = this;
+      return this._ensure().then(function(d) {
+        var data = JSON.parse(JSON.stringify(d));
+        // pages의 무거운 데이터(items, contentBlocks)를 별도 문서에서 로드
+        if (!data.pages || data.pages.length === 0) return data;
+        var loadPromises = data.pages.map(function(page) {
+          // 이미 items가 있으면 (메모리 캐시에서 온 경우) 스킵
+          if (page.items && page.items.length > 0) return Promise.resolve();
+          if (page.contentBlocks && page.contentBlocks.length > 0) return Promise.resolve();
+          return fbDb.collection('app').doc('page_' + page.id).get().then(function(snap) {
+            if (snap.exists) {
+              var heavy = snap.data();
+              page.items = heavy.items || [];
+              page.contentBlocks = heavy.contentBlocks || [];
+              page.tabFields = heavy.tabFields || {};
+            } else {
+              page.items = page.items || [];
+              page.contentBlocks = page.contentBlocks || [];
+              page.tabFields = page.tabFields || {};
+            }
+          }).catch(function(e) {
+            console.warn('페이지 데이터 로드 실패:', page.id, e);
+            page.items = page.items || [];
+            page.contentBlocks = page.contentBlocks || [];
+            page.tabFields = page.tabFields || {};
+          });
+        });
+        return Promise.all(loadPromises).then(function() {
+          // 메모리 캐시도 업데이트 (다음 저장 시 활용)
+          self._cache.pages = data.pages;
+          return data;
+        });
+      });
     },
 
     saveCategory: function(c) {
@@ -570,18 +658,24 @@
 
     clearAll: function() {
       var self = this;
+      // 기존 페이지 서브 문서 삭제
+      var pageDelPromises = (self._cache && self._cache.pages || []).map(function(page) {
+        return fbDb.collection('app').doc('page_' + page.id).delete().catch(function(){});
+      });
       self._cache = defaultData();
       self._fileUrls = {};
       // Storage의 모든 파일도 삭제
-      return fbStorage.ref('files').listAll().then(function(res) {
-        var delPromises = [];
-        res.prefixes.forEach(function(folderRef) {
-          delPromises.push(folderRef.listAll().then(function(sub) {
-            return Promise.all(sub.items.map(function(i){ return i.delete().catch(function(){}); }));
-          }));
-        });
-        return Promise.all(delPromises);
-      }).catch(function(e){ console.warn(e); }).then(function() {
+      return Promise.all(pageDelPromises).then(function() {
+        return fbStorage.ref('files').listAll().then(function(res) {
+          var delPromises = [];
+          res.prefixes.forEach(function(folderRef) {
+            delPromises.push(folderRef.listAll().then(function(sub) {
+              return Promise.all(sub.items.map(function(i){ return i.delete().catch(function(){}); }));
+            }));
+          });
+          return Promise.all(delPromises);
+        }).catch(function(e){ console.warn(e); });
+      }).then(function() {
         return self._persist();
       });
     },
