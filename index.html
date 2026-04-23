@@ -172,6 +172,16 @@
   tr.r-미등록 td.bar::before{background:var(--red)}
   tr.r-추등 td.bar::before{background:var(--blue)}
   tr.r-미완료 td.bar::before{background:#111827}
+  tr.r-등록 td:not(.bar){background:#f0fdf4}
+  tr.r-COD td:not(.bar){background:#fffbeb}
+  tr.r-미등록 td:not(.bar){background:#fff1f2}
+  tr.r-추등 td:not(.bar){background:#eff6ff}
+  tr.r-미완료 td:not(.bar){background:#f8fafc}
+  .data-table tbody tr.r-등록:hover td:not(.bar){background:#dcfce7}
+  .data-table tbody tr.r-COD:hover td:not(.bar){background:#fef3c7}
+  .data-table tbody tr.r-미등록:hover td:not(.bar){background:#ffe4e6}
+  .data-table tbody tr.r-추등:hover td:not(.bar){background:#dbeafe}
+  .data-table tbody tr.r-미완료:hover td:not(.bar){background:#e2e8f0}
   .student-cell .name{font-size:14px;font-weight:800;color:var(--text);cursor:pointer;letter-spacing:-0.005em}
   .student-cell .name:hover{text-decoration:underline;text-underline-offset:3px}
   .student-cell .sub{font-size:11px;color:var(--muted);margin-top:2px}
@@ -401,6 +411,7 @@
     </div>
     <div class="topbar-right">
       <span id="syncIndicator" class="hidden" data-state="idle"></span>
+      <button class="btn btn-sm" onclick="openSalesPeriodModal()" title="영업월 시작일/종료일 설정">영업월 설정</button>
       <button class="btn btn-sm" onclick="openTrash()" title="최근 30일 삭제 기록"> 휴지통 <span id="trashBadge" style="font-size:10px;background:var(--surface-2);padding:1px 5px;border-radius:99px;font-weight:800;margin-left:2px">0</span></button>
       <button class="btn btn-sm" onclick="exportCSV()" title="현재 필터된 목록을 CSV로 내보내기">↓ CSV</button>
       <button class="btn btn-primary btn-sm" onclick="openModal()" title="새 상담 기록 (Ctrl/⌘ + N)">＋ 새 상담</button>
@@ -488,9 +499,9 @@
               <th>학생 · 멘토</th>
               <th>과정</th>
               <th>결과</th>
+              <th style="text-align:right">수강료</th>
               <th style="text-align:right">매출</th>
               <th style="text-align:right">잔액</th>
-              <th style="text-align:center">금액</th>
               <th style="text-align:center">할인</th>
               <th style="text-align:center">메모</th>
               <th style="text-align:right">관리</th>
@@ -542,6 +553,30 @@
   <div class="drawer-body">
     <p style="font-size:12px;color:var(--muted);margin-bottom:12px">삭제 후 30일 내에 복원할 수 있어요. 30일이 지나면 자동으로 영구 삭제됩니다.</p>
     <div id="trashList"></div>
+  </div>
+</div>
+
+<!-- ===== Sales Period Drawer / Modal ===== -->
+<div id="salesPeriodModal" class="modal-backdrop">
+  <div class="modal-panel" style="max-width:860px">
+    <div style="padding:18px 22px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <p style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:0.06em;text-transform:uppercase">영업 기준</p>
+        <h2 style="font-size:18px;font-weight:800;margin-top:2px">영업월 설정</h2>
+      </div>
+      <button onclick="closeSalesPeriodModal()" class="btn btn-sm">닫기</button>
+    </div>
+    <div style="padding:18px 20px;max-height:70vh;overflow:auto">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">시작일과 종료일 기준으로 월 필터를 나눕니다. 저장하면 로그인한 사용자 화면에 바로 반영돼요.</div>
+      <div id="salesPeriodList" style="display:flex;flex-direction:column;gap:10px"></div>
+      <div style="margin-top:14px;display:flex;gap:8px">
+        <button class="btn" onclick="addSalesPeriodRow()">＋ 영업월 추가</button>
+      </div>
+    </div>
+    <div style="padding:14px 20px;border-top:1px solid var(--line-soft);display:flex;gap:8px;background:#fff">
+      <button onclick="closeSalesPeriodModal()" class="btn" style="flex:1">취소</button>
+      <button onclick="saveSalesPeriodSettings()" class="btn btn-primary" style="flex:1">저장</button>
+    </div>
   </div>
 </div>
 
@@ -682,6 +717,8 @@ const LAST_SYNC_KEY = 'consult-dashboard-last-sync';
 const TRASH_KEY = 'consult-dashboard-trash-v1';
 const REFRESH_IF_OLDER_MS = 30 * 1000;
 const TRASH_TTL_DAYS = 30;
+const SALES_PERIODS_KEY = 'consult-dashboard-sales-periods-v1';
+const DEFAULT_SALES_PERIODS = [];
 
 let rows = [];
 let trash = [];                 // 휴지통 (로컬)
@@ -696,6 +733,7 @@ let currentResult = '전체';
 let currentSort = 'desc';
 let selectedCourseValue = '';
 let currentDiscountType = '';
+let salesPeriods = [];
 let courseOptions = ['편집','모션','실내','웹툰','드로잉','마야','웹','자격증'];
 const payerOptions = ['본인','부모님','친구','지인'];
 const purposeOptions = ['취업','취미','창업','보충'];
@@ -711,6 +749,96 @@ function todayStr(){ const d = new Date(); return `${d.getFullYear()}-${String(d
 function displayDate(v){ if(!v) return '-'; if(/^\d{4}-\d{2}-\d{2}$/.test(v)) return v.replace(/-/g,'.'); return v; }
 function monthFromDate(dateValue){ const text = String(dateValue||''); const m = text.match(/^(\d{4})-(\d{2})-(\d{2})$/); if(m) return `${parseInt(m[2],10)}월`; const m2 = text.match(/^(\d{1,2})\./); if(m2) return `${parseInt(m2[1],10)}월`; return '미분류'; }
 function isoTime(dateValue){ const d = new Date(dateValue); return isNaN(d) ? 0 : d.getTime(); }
+
+function normalizeSalesPeriods(periods){
+  return (Array.isArray(periods) ? periods : [])
+    .filter(p => p && p.label && p.start && p.end)
+    .map(p => ({ id: p.id || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random())), label: String(p.label).trim(), start: p.start, end: p.end }))
+    .sort((a,b)=> a.start.localeCompare(b.start));
+}
+function saveSalesPeriodsLocal(){ localStorage.setItem(SALES_PERIODS_KEY, JSON.stringify(salesPeriods)); }
+function loadSalesPeriodsLocal(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(SALES_PERIODS_KEY) || '[]');
+    salesPeriods = normalizeSalesPeriods(saved.length ? saved : DEFAULT_SALES_PERIODS);
+  }catch(e){ salesPeriods = normalizeSalesPeriods(DEFAULT_SALES_PERIODS); }
+}
+function salesMonthFromDate(dateValue){
+  if(!dateValue) return '미분류';
+  if(!salesPeriods.length) return monthFromDate(dateValue);
+  const target = new Date(dateValue + 'T00:00:00').getTime();
+  if(Number.isNaN(target)) return '미분류';
+  for(const period of salesPeriods){
+    const start = new Date(period.start + 'T00:00:00').getTime();
+    const end = new Date(period.end + 'T23:59:59').getTime();
+    if(target >= start && target <= end) return period.label;
+  }
+  return monthFromDate(dateValue);
+}
+function openSalesPeriodModal(){ renderSalesPeriodList(); document.getElementById('salesPeriodModal').classList.add('flex'); }
+function closeSalesPeriodModal(){ document.getElementById('salesPeriodModal').classList.remove('flex'); }
+function renderSalesPeriodList(){
+  const wrap = document.getElementById('salesPeriodList'); if(!wrap) return;
+  wrap.innerHTML = salesPeriods.map(p => `
+    <div class="card" style="padding:12px 14px;display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end">
+      <div><label style="display:block;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">표시명</label><input class="input" data-sp-field="label" data-sp-id="${p.id}" value="${String(p.label).replace(/"/g,'&quot;')}" placeholder="예: 4월" /></div>
+      <div><label style="display:block;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">시작일</label><input class="input" type="date" data-sp-field="start" data-sp-id="${p.id}" value="${p.start}" /></div>
+      <div><label style="display:block;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">종료일</label><input class="input" type="date" data-sp-field="end" data-sp-id="${p.id}" value="${p.end}" /></div>
+      <div><button class="btn btn-sm" style="color:var(--red)" onclick="removeSalesPeriodRow('${p.id}')">삭제</button></div>
+    </div>`).join('');
+  if(!salesPeriods.length){ wrap.innerHTML = '<div class="panel-empty">영업월 설정이 없습니다. 추가 후 저장해주세요.</div>'; }
+}
+function addSalesPeriodRow(){ salesPeriods.push({ id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random()), label:'', start:'', end:'' }); renderSalesPeriodList(); }
+function removeSalesPeriodRow(id){ salesPeriods = salesPeriods.filter(p => p.id !== id); renderSalesPeriodList(); }
+function hasSalesPeriodOverlap(periods){
+  const sorted = [...periods].sort((a,b)=> a.start.localeCompare(b.start));
+  for(let i=0;i<sorted.length-1;i++){ if(sorted[i].end >= sorted[i+1].start) return true; }
+  return false;
+}
+let unsubscribeSettings = null;
+function settingsDocRef(){
+  const fb = window.__fb;
+  return fb.doc(fb.db, 'appSettings', 'salesPeriods');
+}
+function startSalesPeriodSync(){
+  const fb = window.__fb;
+  if(!fb) return;
+  if(unsubscribeSettings) unsubscribeSettings();
+  unsubscribeSettings = fb.onSnapshot(settingsDocRef(), snap => {
+    const data = snap.exists() ? snap.data() : null;
+    if(data && Array.isArray(data.periods)){
+      salesPeriods = normalizeSalesPeriods(data.periods);
+      saveSalesPeriodsLocal();
+      renderAll();
+    }
+  }, err => console.error('영업월 설정 리스너 에러', err));
+}
+function stopSalesPeriodSync(){ if(unsubscribeSettings){ unsubscribeSettings(); unsubscribeSettings = null; } }
+async function saveSalesPeriodSettings(){
+  const next = salesPeriods.map(period => {
+    const labelEl = document.querySelector(`[data-sp-field="label"][data-sp-id="${period.id}"]`);
+    const startEl = document.querySelector(`[data-sp-field="start"][data-sp-id="${period.id}"]`);
+    const endEl = document.querySelector(`[data-sp-field="end"][data-sp-id="${period.id}"]`);
+    return { id: period.id, label: labelEl?.value.trim() || '', start: startEl?.value || '', end: endEl?.value || '' };
+  });
+  for(const item of next){
+    if(!item.label || !item.start || !item.end){ alert('표시명, 시작일, 종료일을 모두 입력해주세요.'); return; }
+    if(item.start > item.end){ alert(`${item.label}의 시작일이 종료일보다 늦습니다.`); return; }
+  }
+  if(hasSalesPeriodOverlap(next)){ alert('영업월 기간이 서로 겹칩니다.'); return; }
+  salesPeriods = normalizeSalesPeriods(next);
+  saveSalesPeriodsLocal();
+  try{
+    const fb = window.__fb;
+    await fb.setDoc(settingsDocRef(), { periods: salesPeriods, updatedAt: fb.serverTimestamp(), updatedBy: currentUserEmail || '' }, { merge: true });
+    toast('영업월 설정을 저장했습니다', {type:'success', duration:1800});
+  }catch(err){
+    console.error(err);
+    toast('Firebase 저장 실패, 이 브라우저에만 저장되었습니다', {type:'error', duration:3000});
+  }
+  closeSalesPeriodModal();
+  renderAll();
+}
 
 function saveLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(rows)); }
 function loadLocal(){
@@ -1146,26 +1274,26 @@ function computeAutoPayable(price, discountType, discountRate){
   return Number(price||0);
 }
 
+function getFormTotalPrice(){
+  const priceEl = document.getElementById('price');
+  return priceEl ? num(priceEl.value) : 0;
+}
+function getFormPayableAmount(){
+  const payField = document.getElementById('payableAmount');
+  return payField ? num(payField.value) : 0;
+}
 function computeFinalPrice(rowLike={}){
-  // rowLike가 있으면 그 값 기준, 없으면 폼 현재값 기준
   if(Object.keys(rowLike).length){
     const payable = rowLike.payableAmount != null
       ? Number(rowLike.payableAmount)
       : computeAutoPayable(rowLike.price, rowLike.discountType, rowLike.discountRate);
     return Math.max(payable - Number(rowLike.specialDiscount||0), 0);
   }
-
-  const priceEl = document.getElementById('price');
-  const payField = document.getElementById('payableAmount');
-  const specialEl = document.getElementById('specialDiscount');
-
-  const price = priceEl ? num(priceEl.value) : 0;
+  const totalPrice = getFormTotalPrice();
   const rate = Number(document.getElementById('discountRate')?.value || 0);
-  const autoPayable = computeAutoPayable(price, currentDiscountType, rate);
-  const payable = (payableManual && payField)
-    ? num(payField.value)
-    : autoPayable;
-  const special = specialEl ? num(specialEl.value) : 0;
+  const autoPayable = computeAutoPayable(totalPrice, currentDiscountType, rate);
+  const payable = payableManual ? getFormPayableAmount() : autoPayable;
+  const special = num(document.getElementById('specialDiscount')?.value || 0);
   return Math.max(payable - special, 0);
 }
 
@@ -1183,40 +1311,30 @@ function resetPayableAuto(){
 }
 
 function updatePaymentPreview(opts={}){
-  // #price가 존재할 때만 참조 (할인방식 없으면 수강료 카드가 숨겨져 있음)
-  const priceEl = document.getElementById('price');
-  const price = priceEl ? num(priceEl.value) : 0;
+  const totalPrice = getFormTotalPrice();
   const rate = Number(document.getElementById('discountRate')?.value || 0);
+  const payField = document.getElementById('payableAmount');
 
-  // 할인방식별로 납부금액 계산
-  let payable;
-  if(currentDiscountType === '과목지원'){
-    // #price = 사용자가 입력한 납부금액
-    payable = price;
-  } else if(currentDiscountType === '%할인'){
-    const autoPayable = computeAutoPayable(price, '%할인', rate);
-    // 할인금액 자동 채우기
-    const discAmt = computePercentDiscount(price, rate);
+  let autoPayable = computeAutoPayable(totalPrice, currentDiscountType, rate);
+  if(currentDiscountType === '%할인'){
+    const discAmt = computePercentDiscount(totalPrice, rate);
     const discField = document.getElementById('percentDiscountAmount');
     if(discField) discField.value = discAmt ? format(discAmt) : '';
-    // 납부금액 필드 (수동 아니면 자동 채움)
-    const payField = document.getElementById('payableAmount');
-    if(payField && !payableManual && !opts.skipPayableRewrite){
-      payField.value = autoPayable ? format(autoPayable) : '';
-    }
-    payable = payableManual && payField ? num(payField.value) : autoPayable;
   } else {
-    // 할인 없음 - 수강료 카드 자체가 없음. 납부금액 = 0
-    payable = 0;
+    const discField = document.getElementById('percentDiscountAmount');
+    if(discField) discField.value = '';
   }
 
-  // 실결제 = 납부금액 - 직권할인
+  if(payField && !payableManual && !opts.skipPayableRewrite){
+    payField.value = autoPayable ? format(autoPayable) : '';
+  }
+
   const special = num(document.getElementById('specialDiscount')?.value || 0);
+  const payable = payableManual ? getFormPayableAmount() : autoPayable;
   const finalPrice = Math.max(payable - special, 0);
   const finalEl = document.getElementById('finalPrice');
   if(finalEl) finalEl.value = finalPrice ? format(finalPrice) : '';
 
-  // 매출외수당
   const ddz = num(document.getElementById('ddazuaPrice')?.value || 0);
   const acp = num(document.getElementById('acpPrice')?.value || 0);
   const bt = document.getElementById('bonusTotal');
@@ -1227,14 +1345,9 @@ function updatePaymentPreview(opts={}){
 
 function updateRemain(){
   const finalPrice = computeFinalPrice();
-  const paidEl = document.getElementById('paid');
-  const remainEl = document.getElementById('remain');
-  const finalEl = document.getElementById('finalPrice');
-
-  const paid = paidEl ? num(paidEl.value) : 0;
+  const paid = num(document.getElementById('paid')?.value || 0);
   const remain = Math.max(finalPrice - paid, 0);
-
-  if(finalEl) finalEl.value = finalPrice ? format(finalPrice) : '';
+  const remainEl = document.getElementById('remain');
   if(remainEl) remainEl.value = format(remain);
 }
 
@@ -1243,17 +1356,17 @@ function getAutoResult(obj){
   const paid = Number(obj.paid||0);
   const isOverdue = obj.deadline && isoTime(obj.deadline) < new Date(new Date().toDateString()).getTime();
   if(obj.result === '추등') return '추등';
+  if(paid <= 0) return '미등록';
   if(remain <= 0) return '등록';
-  if(paid > 0 && isOverdue) return '미완료';
-  if(paid > 0) return 'COD';
-  return '미등록';
+  if(isOverdue) return '미완료';
+  return 'COD';
 }
 
-function getMonths(){ return ['전체', ...[...new Set(rows.map(r=>monthFromDate(r.date)).filter(Boolean))].sort((a,b)=>parseInt(a)-parseInt(b))]; }
+function getMonths(){ const labels = [...new Set(rows.map(r=>salesMonthFromDate(r.date)).filter(Boolean))]; const ordered = salesPeriods.map(p=>p.label).filter(l=>labels.includes(l)); const extra = labels.filter(l=>!ordered.includes(l)); return ['전체', ...ordered, ...extra]; }
 function getFilteredRows(){
   const keyword = document.getElementById('search').value.trim();
   return rows.filter(r => {
-    const monthOk = currentMonth === '전체' || monthFromDate(r.date) === currentMonth;
+    const monthOk = currentMonth === '전체' || salesMonthFromDate(r.date) === currentMonth;
     const resultOk = currentResult === '전체' || r.displayResult === currentResult;
     const searchOk = !keyword || [r.student, r.mentor, r.course].some(v => String(v||'').includes(keyword));
     return monthOk && resultOk && searchOk;
@@ -1264,7 +1377,7 @@ function renderMonthTabs(){
   const wrap = document.getElementById('monthTabs');
   const months = getMonths();
   const counts = {};
-  rows.forEach(r => { const m = monthFromDate(r.date); counts[m] = (counts[m]||0)+1; });
+  rows.forEach(r => { const m = salesMonthFromDate(r.date); counts[m] = (counts[m]||0)+1; });
   counts['전체'] = rows.length;
   wrap.innerHTML = months.map(month =>
     `<button class="side-item ${currentMonth===month?'active':''}" onclick="setMonth('${month}')"><span>${month}</span><span class="count">${format(counts[month]||0)}</span></button>`
@@ -1354,7 +1467,7 @@ function renderUrgent(filtered){
 function monthGroupRows(rowsInput){
   const groups = [];
   let current = '';
-  rowsInput.forEach(r=>{ const m = monthFromDate(r.date); if(m !== current){ current = m; groups.push({type:'month', label:m}); } groups.push({type:'row', row:r}); });
+  rowsInput.forEach(r=>{ const m = salesMonthFromDate(r.date); if(m !== current){ current = m; groups.push({type:'month', label:m}); } groups.push({type:'row', row:r}); });
   return groups;
 }
 function renderTable(filtered){
@@ -1395,9 +1508,9 @@ function renderTable(filtered){
       </td>
       <td><span class="course-pill">${r.course || '-'}</span></td>
       <td class="cell-editable" data-id="${id}" data-field="displayResult"><span class="badge badge-${result}">${result}</span></td>
+      <td style="text-align:right"><span class="money">${format(r.price||0)}</span></td>
       <td style="text-align:right" class="cell-editable" data-id="${id}" data-field="paid"><span class="money paid">${format(r.paid)}</span></td>
       <td style="text-align:right"><span class="money ${remain>0?'remain-pos':'remain-zero'}" onclick="quickEditAmount(${actualIndex}, 'remain')">${format(remain)}</span></td>
-      <td style="text-align:center"><button class="icon-btn" onclick="showMiniDetail('금액 정보', ${actualIndex}, 'amount')">₩</button></td>
       <td style="text-align:center"><button class="icon-btn" onclick="showMiniDetail('할인 구성', ${actualIndex}, 'discount')">%</button></td>
       <td style="text-align:center"><button class="icon-btn" onclick="showMiniDetail('특이사항', ${actualIndex}, 'memo')">≡</button></td>
       <td style="text-align:right">
@@ -1572,17 +1685,8 @@ function renderTuitionPane(){
   const title = document.getElementById('tuitionTitle');
   if(!pane || !card) return;
 
-  // "할인 없음" (초기 상태): 수강료 카드 자체 숨김
-  if(!currentDiscountType){
-    card.style.display = 'none';
-    pane.innerHTML = '';
-    return;
-  }
   card.style.display = '';
-
-  // 현재 입력값 보존 (할인방식 전환 시 값 유지)
   const curPrice = document.getElementById('price')?.value || '';
-  const curPayable = document.getElementById('payableAmount')?.value || '';
 
   if(currentDiscountType === '과목지원'){
     title.innerHTML = `수강료 <span class="form-sub">과목지원 · 납부금액 직접 입력</span>`;
@@ -1590,12 +1694,12 @@ function renderTuitionPane(){
       <div class="field">
         <label>납부금액</label>
         <input id="price" class="input" inputmode="numeric" value="${curPrice}" oninput="formatCurrencyInput(this); updatePaymentPreview();" />
-        <div class="field-hint">과목지원은 이미 할인된 금액이라, 입력한 금액이 그대로 납부금액이에요</div>
+        <div class="field-hint">과목지원은 입력한 금액이 그대로 납부금액으로 반영됩니다.</div>
       </div>`;
   } else if(currentDiscountType === '%할인'){
-    title.innerHTML = `수강료 <span class="form-sub">총금액 · 할인금액 · 납부금액 (자동 계산)</span>`;
+    title.innerHTML = `수강료 <span class="form-sub">총금액 · 할인금액 자동 계산</span>`;
     pane.innerHTML = `
-      <div class="grid-3">
+      <div class="grid-2">
         <div class="field">
           <label>총금액</label>
           <input id="price" class="input" inputmode="numeric" value="${curPrice}" oninput="formatCurrencyInput(this); updatePaymentPreview();" />
@@ -1604,12 +1708,16 @@ function renderTuitionPane(){
           <label>할인금액 <span class="field-aux">자동</span></label>
           <input id="percentDiscountAmount" class="input" style="background:var(--surface-2)" readonly />
         </div>
-        <div class="field">
-          <label>납부금액 <span class="field-aux" id="payableAuto">자동</span></label>
-          <input id="payableAmount" class="input" inputmode="numeric" value="${curPayable}" oninput="formatCurrencyInput(this); onPayableManualEdit();" />
-        </div>
       </div>
-      <div class="field-hint" style="margin-top:6px">납부금액 = 총금액 − 할인금액</div>`;
+      <div class="field-hint" style="margin-top:6px">납부금액은 아래 결제 정보 칸에 자동 반영됩니다.</div>`;
+  } else {
+    title.innerHTML = `수강료 <span class="form-sub">할인 없음 · 총금액 = 납부금액</span>`;
+    pane.innerHTML = `
+      <div class="field">
+        <label>총금액</label>
+        <input id="price" class="input" inputmode="numeric" value="${curPrice}" oninput="formatCurrencyInput(this); updatePaymentPreview();" />
+        <div class="field-hint">할인 없음은 총금액이 그대로 납부금액으로 반영됩니다.</div>
+      </div>`;
   }
 }
 
@@ -1636,7 +1744,7 @@ function renderDiscountPane(){
         <div class="field-hint">2자리 입력 시 자동으로 다음 칸 · Enter로 넘기기</div>
       </div>`;
   } else {
-    pane.innerHTML = `<div class="field-hint" style="padding:6px 2px">할인 방식을 선택하면 수강료 입력 칸이 나타나요.</div>`;
+    pane.innerHTML = `<div class="field-hint" style="padding:6px 2px">할인 없음은 위 수강료 칸에 총금액만 입력하면 됩니다.</div>`;
   }
 }
 
@@ -1685,10 +1793,8 @@ function buildRowFromForm(){
   const priceInput = priceEl ? num(priceEl.value) : 0;
   const rate = Number(document.getElementById('discountRate')?.value || 0);
 
-  // 할인방식별로 총금액 / 납부금액 의미가 다름
   let totalPrice, payableAmount;
   if(currentDiscountType === '과목지원'){
-    // 과목지원: 입력한 #price는 이미 할인된 납부금액
     payableAmount = priceInput;
     totalPrice = priceInput;
   } else if(currentDiscountType === '%할인'){
@@ -1697,9 +1803,8 @@ function buildRowFromForm(){
     const payField = document.getElementById('payableAmount');
     payableAmount = (payableManual && payField) ? num(payField.value) : autoPayable;
   } else {
-    // 할인 없음 — 수강료 카드가 없으므로 0
-    totalPrice = 0;
-    payableAmount = 0;
+    totalPrice = priceInput;
+    payableAmount = (payableManual ? getFormPayableAmount() : priceInput);
   }
 
   const ddz = num(ddazuaPrice.value);
@@ -1965,21 +2070,23 @@ function editRow(index){
       priceEl.value = payable ? format(payable) : '';
     } else if(currentDiscountType === '%할인'){
       priceEl.value = r.price ? format(r.price) : '';
+    } else {
+      priceEl.value = r.price ? format(r.price) : '';
     }
-    // 할인 없음이면 priceEl이 존재하지 않으므로 패스
   }
 
+  const payField = document.getElementById('payableAmount');
+  if(payField && r.payableAmount != null){
+    payField.value = format(r.payableAmount);
+    const aux = document.getElementById('payableAuto');
+    if(aux){
+      if(payableManual){ aux.textContent='수동'; aux.classList.add('manual'); }
+      else { aux.textContent='자동'; aux.classList.remove('manual'); }
+    }
+  }
   if(currentDiscountType === '%할인'){
     const dr = document.getElementById('discountRate');
     if(dr) dr.value = r.discountRate || '';
-    const payField = document.getElementById('payableAmount');
-    if(payField){
-      if(payableManual && r.payableAmount != null){
-        payField.value = format(r.payableAmount);
-        const aux = document.getElementById('payableAuto');
-        if(aux){ aux.textContent='수동'; aux.classList.add('manual'); }
-      }
-    }
   }
   if(currentDiscountType === '과목지원'){
     const sp = document.getElementById('supportPaidCount'); if(sp) sp.value = r.supportPaidCount || 0;
@@ -2199,6 +2306,7 @@ function onUserSignedIn(user){
 function onUserSignedOut(){
   currentUserEmail = null;
   stopRealtimeSync();
+  stopSalesPeriodSync();
   document.getElementById('authOverlay').style.display = 'flex';
   document.getElementById('appRoot').style.display = 'none';
 }
@@ -2231,6 +2339,7 @@ function bootApp(){
   renderChoiceButtons();
   loadLocal();
   loadTrash();
+  loadSalesPeriodsLocal();
   lastSyncAt = Number(localStorage.getItem(LAST_SYNC_KEY) || 0);
   renderCourseButtons();
   renderTuitionPane();
@@ -2238,6 +2347,7 @@ function bootApp(){
   renderAll();
   // 실시간 리스너 시작
   startRealtimeSync();
+  startSalesPeriodSync();
 }
 </script>
 </body>
