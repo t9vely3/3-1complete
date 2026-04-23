@@ -1146,21 +1146,27 @@ function computeAutoPayable(price, discountType, discountRate){
   return Number(price||0);
 }
 
-function computeFinalPrice(rowLike={}){
-  // rowLike가 있으면 그 값 기준, 없으면 폼 현재값 기준
-  if(Object.keys(rowLike).length){
+function computeFinalPrice(rowLike = {}){
+  if (Object.keys(rowLike).length) {
     const payable = rowLike.payableAmount != null
       ? Number(rowLike.payableAmount)
       : computeAutoPayable(rowLike.price, rowLike.discountType, rowLike.discountRate);
-    return Math.max(payable - Number(rowLike.specialDiscount||0), 0);
+    return Math.max(payable - Number(rowLike.specialDiscount || 0), 0);
   }
-  const price = num(document.getElementById('price').value);
+
+  const priceEl = document.getElementById('price');
+  const payField = document.getElementById('payableAmount');
+  const specialEl = document.getElementById('specialDiscount');
+
+  const price = priceEl ? num(priceEl.value) : 0;
   const rate = Number(document.getElementById('discountRate')?.value || 0);
   const autoPayable = computeAutoPayable(price, currentDiscountType, rate);
-  const payable = payableManual
-    ? num(document.getElementById('payableAmount').value)
+
+  const payable = payableManual && payField
+    ? num(payField.value)
     : autoPayable;
-  const special = num(document.getElementById('specialDiscount').value);
+
+  const special = specialEl ? num(specialEl.value) : 0;
   return Math.max(payable - special, 0);
 }
 
@@ -1222,9 +1228,15 @@ function updatePaymentPreview(opts={}){
 
 function updateRemain(){
   const finalPrice = computeFinalPrice();
-  const paid = num(document.getElementById('paid').value);
+  const paidEl = document.getElementById('paid');
+  const remainEl = document.getElementById('remain');
+  const finalEl = document.getElementById('finalPrice');
+
+  const paid = paidEl ? num(paidEl.value) : 0;
   const remain = Math.max(finalPrice - paid, 0);
-  document.getElementById('remain').value = format(remain);
+
+  if (finalEl) finalEl.value = finalPrice ? format(finalPrice) : '';
+  if (remainEl) remainEl.value = remain ? format(remain) : '0';
 }
 
 function getAutoResult(obj){
